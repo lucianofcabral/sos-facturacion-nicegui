@@ -1,0 +1,69 @@
+CREATE EXTENSION IF NOT EXISTS citext;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TYPE rol_usuario AS ENUM ('admin', 'usuario');
+
+
+CREATE TABLE IF NOT EXISTS periodo (
+    id        SERIAL PRIMARY KEY,
+    nombre    CITEXT NOT NULL CHECK (char_length(nombre) <= 20),
+    anio      INTEGER NOT NULL CHECK (anio BETWEEN 2024 AND 2100),
+    mes       INTEGER NOT NULL CHECK (mes BETWEEN 1 AND 12)
+);
+CREATE INDEX IF NOT EXISTS idx_periodo_anio ON periodo (anio);
+CREATE INDEX IF NOT EXISTS idx_periodo_mes ON periodo (mes);
+CREATE INDEX IF NOT EXISTS idx_periodo_anio_mes ON periodo (anio, mes);
+
+CREATE TABLE IF NOT EXISTS tipo_servicio (
+    id     SERIAL PRIMARY KEY,
+    rama   VARCHAR(25) NOT NULL,
+    nombre CITEXT NOT NULL CHECK (char_length(nombre) <= 50)
+);
+CREATE INDEX IF NOT EXISTS idx_tipo_servicio_rama ON tipo_servicio (rama);
+CREATE INDEX IF NOT EXISTS idx_periodo_nombre ON tipo_servicio (nombre);
+
+CREATE TABLE IF NOT EXISTS alicuota (
+    periodo_id        INTEGER NOT NULL REFERENCES periodo(id),
+    tipo_servicio_id  INTEGER NOT NULL REFERENCES tipo_servicio(id),
+    coeficiente       NUMERIC(10, 6) NOT NULL,
+    valor             NUMERIC(12, 2) NOT NULL CHECK (valor > 0),
+    UNIQUE (periodo_id, tipo_servicio_id, coeficiente)
+);
+CREATE INDEX IF NOT EXISTS idx_alicuota ON alicuota (periodo_id, tipo_servicio_id, coeficiente);
+
+CREATE TABLE IF NOT EXISTS servicio (
+    nro_servicio      CITEXT NOT NULL CHECK (char_length(nro_servicio) <= 20),
+    codigo_radio      CITEXT NOT NULL CHECK (char_length(codigo_radio) <= 6),
+    fecha             DATE NOT NULL,
+    dominio           CITEXT NOT NULL CHECK (char_length(dominio) <= 12),
+    cod_productor     INTEGER NOT NULL,
+    periodo_id        INTEGER NOT null REFERENCES periodo(id),
+    tipo_servicio_id  INTEGER NOT null REFERENCES tipo_servicio(id),
+    UNIQUE (nro_servicio)
+);
+CREATE INDEX IF NOT EXISTS idx_servicio_periodo ON servicio (periodo_id);
+CREATE INDEX IF NOT EXISTS idx_servicio_periodo_tipo_servicio ON servicio (periodo_id, tipo_servicio_id);
+
+CREATE TABLE IF NOT EXISTS capita_periodo (
+    periodo_id        INTEGER NOT NULL REFERENCES periodo(id) ,
+    tipo_servicio_id  INTEGER NOT NULL REFERENCES tipo_servicio(id) ,
+    capitas           INTEGER NOT NULL CHECK (capitas >= 0),
+    PRIMARY KEY (periodo_id, tipo_servicio_id)
+);
+
+
+
+CREATE TABLE IF NOT EXISTS usuario (
+	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	nombre CITEXT NOT NULL UNIQUE CHECK (
+		char_length(nombre) >= 3
+	),
+	password_hash TEXT NOT NULL,
+	rol rol_usuario NOT NULL DEFAULT 'usuario',
+	email CITEXT UNIQUE NULL CHECK (
+		char_length(email) <= 255
+	),
+	activo BOOLEAN NOT NULL DEFAULT TRUE,
+	creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
+	actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
