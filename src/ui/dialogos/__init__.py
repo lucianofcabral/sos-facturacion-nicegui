@@ -3,11 +3,12 @@
 Cada campo es un dict con:
   key, label, type ("text"|"number"|"password"|"select"|"date")
   type=="number": coerce ("int"|"float"), min, max, step
-  type=="select": options -> corrutina que devuelve [(valor, etiqueta), ...]
+  type=="select": options -> lista fija, o callable (sync/async) que devuelve [(valor, etiqueta), ...]
 """
 
 from __future__ import annotations
 
+import inspect
 from datetime import datetime
 
 from nicegui import ui
@@ -42,8 +43,12 @@ async def open_form_dialog(
             label = f["label"]
             ftype = f.get("type", "text")
             if ftype == "select":
-                opts = await f["options"]() if f.get("options") else []
-                sel = ui.select(dict(opts), label=label)
+                opts = f.get("options")
+                if callable(opts):
+                    opts = opts()
+                if inspect.isawaitable(opts):
+                    opts = await opts
+                sel = ui.select(dict(opts or []), label=label)
                 if fk in initial:
                     sel.value = initial[fk]
                 widgets[fk] = sel
