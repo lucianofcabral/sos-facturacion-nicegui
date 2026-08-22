@@ -12,9 +12,10 @@ import pytest
 from psycopg.errors import UniqueViolation
 
 from conftest import run_test
-from src.application.use_cases import alicuota, periodo, tipo_servicio
+from src.application.use_cases import alicuota, cierre, periodo, tipo_servicio
 from src.domain.dto.create import CreateAlicuota, CreatePeriodo, CreateTipoServicio
 from src.domain.enums import EstadoCierre, OrigenCierre
+from src.domain.exceptions import PeriodoAlreadyClosedError, RecalculoInvalidoError
 from src.domain.models.entities import Alicuota, Cierre
 from src.infrastructure.adapters.uow import PostgresUoW
 
@@ -132,5 +133,106 @@ def test_second_oficial_violates_unique():
                         "VALUES (%s, %s, 'oficial', 'manual', %s)",
                         (p.id, 2, Decimal("0")),
                     )
+
+    run_test(main)
+
+
+def test_cerrar_first_period_keeps_manual_alicuotas():
+    async def main():
+        async with PostgresUoW() as uow:
+            p = await _crear_periodo(uow, 2026, 1, "Ene")
+            ts = await _crear_ts(uow, "A", "A")
+            await _crear_alicuota(uow, p.id, ts.id, 0.5, 77.0)
+            c = await cierre.cerrar_periodo(uow, p.id, Decimal("10"))
+            assert c.estado == EstadoCierre.OFICIAL
+            assert c.origen == OrigenCierre.MANUAL
+            assert c.version == 1
+            actuales = await uow.alicuotas.get_by_keys(periodo_id=p.id)
+            assert [a.valor for a in actuales] == [77.0]
+
+    run_test(main)
+
+
+def test_cerrar_recalculates_from_previous():
+    async def main():
+        async with PostgresUoW() as uow:
+            prev = await _crear_periodo(uow, 2026, 1, "Ene")
+            target = await _crear_periodo(uow, 2026, 2, "Feb")
+            ts_a = await _crear_ts(uow, "A", "A")
+            ts_b = await _crear_ts(uow, "B", "B")
+            ts_c = await _crear_ts(uow, "C", "C")
+            ts_d = await _crear_ts(uow, "D", "D")
+            await _crear_alicuota(uow, prev.id, ts_a.id, 0.5, 100.0)
+            await _crear_alicuota(uow, prev.id, ts_b.id, 0.5, 200.0)
+            await _crear_alicuota(uow, prev.id, ts_c.id, 0.5, 300.0)
+            await _crear_alicuota(uow, target.id, ts_a.id, 0.5, 999.0)
+            await _crear_alicuota(uow, target.id, ts_d.id, 0.5, 400.0)
+            c = await cierre.cerrar_periodo(uow, target.id, Decimal("10"))
+            assert c.version == 1
+            actuales = await uow.alicuotas.get_by_keys(periodo_id=target.id)
+            by_id = {a.tipo_servicio_id: a.valor for a in actuales}
+            assert by_id == {ts_a.id: 110.0, ts_b.id: 220.0, ts_c.id: 330.0}
+
+    run_test(main)
+
+
+def test_cerrar_rebaja():
+    async def main():
+        async with PostgresUoW() as uow:
+            prev = await _crear_periodo(uow, 2026, 1, "Ene")
+            target = await _crear_periodo(uow, 2026, 2, "Feb")
+            ts = await _crear_ts(uow, "A", "A")
+            await _crear_alicuota(uow, prev.id, ts.id, 0.5, 100.0)
+            await cierre.cerrar_periodo(uow, target.id, Decimal("-10"))
+            actuales = await uow.alicuotas.get_by_keys(periodo_id=target.id)
+            assert [a.valor for a in actuales] == [90.0]
+
+    run_test(main)
+
+
+def test_cerrar_double_close_rejected():
+    async def main():
+        async with PostgresUoW() as uow:
+            p = await _crear_periodo(uow, 2026, 1, "Ene")
+            await cierre.cerrar_periodo(uow, p.id, Decimal("0"))
+            with pytest.raises(PeriodoAlreadyClosedError):
+                await cierre.cerrar_periodo(uow, p.id, Decimal("5"))
+
+    run_test(main)
+
+
+def test_cerrar_atomic_on_recalc_error():
+    async def main():
+        async with PostgresUoW() as uow:
+            prev = await _crear_periodo(uow, 2026, 1, "Ene")
+            target = await _crear_periodo(uow, 2026, 2, "Feb")
+            ts_a = await _crear_ts(uow, "A", "A")
+            ts_b = await _crear_ts(uow, "B", "B")
+            ts_d = await _crear_ts(uow, "D", "D")
+            await _crear_alicuota(uow, prev.id, ts_a.id, 0.5, 100.0)
+            await _crear_alicuota(uow, prev.id, ts_b.id, 0.5, 0.01)
+            await _crear_alicuota(uow, target.id, ts_d.id, 0.5, 50.0)
+            with pytest.raises(RecalculoInvalidoError):
+                await cierre.cerrar_periodo(uow, target.id, Decimal("-99"))
+            assert await uow.cierres.get_oficial(target.id) is None
+            actuales = await uow.alicuotas.get_by_keys(periodo_id=target.id)
+            assert {a.tipo_servicio_id: a.valor for a in actuales} == {ts_d.id: 50.0}
+
+    run_test(main)
+
+
+def test_cerrar_post_rounding_zero_persists_nothing():
+    async def main():
+        async with PostgresUoW() as uow:
+            prev = await _crear_periodo(uow, 2026, 1, "Ene")
+            target = await _crear_periodo(uow, 2026, 2, "Feb")
+            ts = await _crear_ts(uow, "A", "A")
+            await _crear_alicuota(uow, prev.id, ts.id, 0.5, 0.01)
+            await _crear_alicuota(uow, target.id, ts.id, 0.5, 50.0)
+            with pytest.raises(RecalculoInvalidoError):
+                await cierre.cerrar_periodo(uow, target.id, Decimal("-99"))
+            assert await uow.cierres.get_oficial(target.id) is None
+            actuales = await uow.alicuotas.get_by_keys(periodo_id=target.id)
+            assert [a.valor for a in actuales] == [50.0]
 
     run_test(main)

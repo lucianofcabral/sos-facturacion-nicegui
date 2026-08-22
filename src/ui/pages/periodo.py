@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from nicegui import ui
+
+from src.application.use_cases import cierre as cierre_uc
 from src.application.use_cases import periodo as uc
 from src.domain.dto.create import CreatePeriodo
 from src.domain.dto.edit import EditPeriodo
 from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.componentes.tablas import CrudPanel
+from src.ui.dialogos import open_form_dialog
 
 COLUMNS = [
     {"name": "id", "label": "ID", "field": "id"},
@@ -19,6 +23,11 @@ FIELDS = [
     {"key": "nombre", "label": "Nombre", "type": "text"},
     {"key": "anio", "label": "Año", "type": "number", "coerce": "int", "min": 2024, "max": 2100},
     {"key": "mes", "label": "Mes", "type": "number", "coerce": "int", "min": 1, "max": 12},
+]
+
+CIERRE_FIELDS = [
+    {"key": "aumento", "label": "Aumento (%)", "type": "number", "coerce": "float", "min": -99.99, "step": 0.01},
+    {"key": "motivo", "label": "Motivo", "type": "text"},
 ]
 
 
@@ -50,6 +59,22 @@ async def _delete(row: dict) -> None:
         await uc.eliminar_periodo(uow, row["id"])
 
 
+async def _cerrar(row: dict) -> None:
+    async def _submit(values: dict) -> None:
+        aumento = values["aumento"] if values["aumento"] is not None else 0.0
+        async with PostgresUoW() as uow:
+            await cierre_uc.cerrar_periodo(
+                uow, row["id"], aumento, values["motivo"] or None
+            )
+        ui.notify("Período cerrado", type="positive")
+
+    await open_form_dialog(
+        title="Cerrar período",
+        fields=CIERRE_FIELDS,
+        on_submit=_submit,
+    )
+
+
 def _initial(row: dict) -> dict:
     return {"nombre": row["nombre"], "anio": row["anio"], "mes": row["mes"]}
 
@@ -64,5 +89,6 @@ async def render(_user: dict) -> None:
         on_submit=_submit,
         on_delete=_delete,
         get_initial=_initial,
+        row_actions=[("Cerrar período", _cerrar)],
     )
     await panel.render()
