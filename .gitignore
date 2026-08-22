@@ -14,3 +14,6 @@ wheels/
 # NiceGUI local session storage (runtime artifacts)
 .nicegui/
 
+# SDD skill registry (auto-generated index)
+.atl/
+
