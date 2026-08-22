@@ -16,6 +16,7 @@ from src.domain.exceptions import (
 from src.domain.models.entities import (
     Alicuota,
     CapitaPeriodo,
+    Cierre,
     Periodo,
     Servicio,
     TipoServicio,
@@ -58,6 +59,8 @@ class PeriodoRepository(Repository[Periodo], Protocol):
 
     def get_by_anio_mes(self, anio: int, mes: int) -> list[Periodo]: ...
 
+    def get_previous(self, anio: int, mes: int) -> Periodo | None: ...
+
 
 class TipoServicioRepository(Repository[TipoServicio], Protocol):
     def get(self, id: int) -> TipoServicio: ...
@@ -73,6 +76,10 @@ class AlicuotaRepository(Repository[Alicuota], Protocol):
         tipo_servicio_id: int | None = None,
         coeficiente: float | None = None,
     ) -> list[Alicuota]: ...
+
+    def reemplazar_por_periodo(
+        self, periodo_id: int, alicuotas: list[Alicuota]
+    ) -> None: ...
 
 
 class ServicioRepository(Repository[Servicio], Protocol):
@@ -98,6 +105,13 @@ class CapitaPeriodoRepository(Repository[CapitaPeriodo], Protocol):
         periodo_id: int | None = None,
         tipo_servicio_id: int | None = None,
     ) -> list[CapitaPeriodo]: ...
+
+
+class CierreRepository(Repository[Cierre], Protocol):
+    def get(self, id: int) -> Cierre: ...
+    def remove(self, id: int) -> None: ...
+    def next_version(self, periodo_id: int) -> int: ...
+    def get_oficial(self, periodo_id: int) -> Cierre | None: ...
 
 
 class UsuarioAppRepository(Repository[UsuarioApp], Protocol):

@@ -12,6 +12,7 @@ from typing import Protocol
 from src.domain.ports.repositories import (
     AlicuotaRepository,
     CapitaPeriodoRepository,
+    CierreRepository,
     PeriodoRepository,
     ServicioRepository,
     TipoServicioRepository,
@@ -26,6 +27,7 @@ class UnitOfWorkPort(Protocol):
     servicios: ServicioRepository
     capitas_periodo: CapitaPeriodoRepository
     usuarios: UsuarioAppRepository
+    cierres: CierreRepository
 
     async def commit(self) -> None:
         """Persist all changes made within this unit of work."""

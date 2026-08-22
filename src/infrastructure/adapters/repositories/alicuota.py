@@ -46,3 +46,27 @@ class AlicuotaRepositoryPg(PostgresRepository, AlicuotaRepository):
             await cur.execute(sql, params)
             rows = await cur.fetchall()
         return [self._row_to_entity(r) for r in rows]
+
+    async def reemplazar_por_periodo(
+        self, periodo_id: int, alicuotas: list[Alicuota]
+    ) -> None:
+        """Atomically replace the period's alicuotas on the same connection.
+
+        Uses a raw DELETE (not ``_delete``) so replacing with an empty set is
+        legal, followed by a single ``executemany`` INSERT.
+        """
+        async with self._conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"DELETE FROM {self.table} WHERE periodo_id = %s", (periodo_id,)
+            )
+            if alicuotas:
+                rows = [
+                    (a.periodo_id, a.tipo_servicio_id, a.coeficiente, a.valor)
+                    for a in alicuotas
+                ]
+                await cur.executemany(
+                    f"INSERT INTO {self.table} "
+                    "(periodo_id, tipo_servicio_id, coeficiente, valor) "
+                    "VALUES (%s, %s, %s, %s)",
+                    rows,
+                )

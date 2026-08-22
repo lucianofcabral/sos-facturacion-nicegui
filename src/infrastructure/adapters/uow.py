@@ -13,6 +13,7 @@ from psycopg_pool import AsyncConnectionPool
 from src.infrastructure.adapters.repositories import (
     AlicuotaRepositoryPg,
     CapitaPeriodoRepositoryPg,
+    CierreRepositoryPg,
     PeriodoRepositoryPg,
     ServicioRepositoryPg,
     TipoServicioRepositoryPg,
@@ -38,6 +39,7 @@ class PostgresUoW:
         self.servicios = ServicioRepositoryPg(self._conn)
         self.capitas_periodo = CapitaPeriodoRepositoryPg(self._conn)
         self.usuarios = UsuarioAppRepositoryPg(self._conn)
+        self.cierres = CierreRepositoryPg(self._conn)
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> None:

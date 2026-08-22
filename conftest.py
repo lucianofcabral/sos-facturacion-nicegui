@@ -28,7 +28,7 @@ from src.infrastructure.db.connection import close_pool, get_pool  # noqa: E402
 
 TRUNCATE = (
     "TRUNCATE TABLE usuario, periodo, tipo_servicio, alicuota, "
-    "servicio, capita_periodo RESTART IDENTITY CASCADE;"
+    "servicio, capita_periodo, cierre RESTART IDENTITY CASCADE;"
 )
 
 

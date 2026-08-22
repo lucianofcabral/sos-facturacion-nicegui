@@ -36,3 +36,13 @@ class PeriodoRepositoryPg(PostgresRepository, PeriodoRepository):
             await cur.execute(sql, (anio, mes))
             rows = await cur.fetchall()
         return [self._row_to_entity(r) for r in rows]
+
+    async def get_previous(self, anio: int, mes: int) -> Periodo | None:
+        sql = (
+            f"SELECT * FROM {self.table} WHERE (anio, mes) < (%s, %s) "
+            f"ORDER BY anio DESC, mes DESC LIMIT 1"
+        )
+        async with self._conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(sql, (anio, mes))
+            row = await cur.fetchone()
+        return self._row_to_entity(row) if row is not None else None
