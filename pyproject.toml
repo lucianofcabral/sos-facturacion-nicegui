@@ -1,0 +1,74 @@
+[project]
+name = "sos-facturacion-nicegui"
+version = "0.1.0"
+description = "Aplicacion fullstack para computar la facturación de SOS."
+readme = "README.md"
+authors = [
+    { name = "Luciano Cabral", email = "lucianofcabral@outlook.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "bcrypt>=4.2",
+    "nicegui>=3.16.0",
+    "openpyxl>=3.1.5",
+    "psycopg-pool>=3.3.1",
+    "psycopg[binary]>=3.3.4",
+    "pydantic>=2.13.4",
+    "python-dotenv>=1.2.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.15.20",
+    "testcontainers[postgres]>=4.15.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"  # ajustá según tu versión de Python
+
+# Directorios/archivos a excluir
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "migrations",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort (orden de imports)
+    "N",      # pep8-naming
+    "UP",     # pyupgrade (sintaxis moderna)
+    # "B",      # flake8-bugbear (bugs comunes)
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "RUF",    # reglas propias de Ruff
+]
+
+ignore = [
+    "E501",   # línea muy larga (si ya controlás con line-length)
+]
+
+# Permitir auto-fix
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # imports no usados permitidos en __init__
+"tests/*" = ["S101"]      # permitir asserts en tests
+
+[tool.ruff.format]
+quote-style = "double"
+skip-magic-trailing-comma = false
+line-ending = "auto"
