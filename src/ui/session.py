@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from nicegui import app
 
 from src.domain.enums import RolUsuario
@@ -9,9 +11,9 @@ from src.domain.enums import RolUsuario
 _KEY = "sos_user"
 
 
-def set_current_user(nombre: str, rol: RolUsuario) -> None:
+def set_current_user(id: UUID, nombre: str, rol: RolUsuario) -> None:
     # 'user' (no 'client') persiste entre reloads; requiere storage_secret en ui.run().
-    app.storage.user[_KEY] = {"nombre": nombre, "rol": rol.value}
+    app.storage.user[_KEY] = {"id": str(id), "nombre": nombre, "rol": rol.value}
 
 
 def get_current_user() -> dict | None:

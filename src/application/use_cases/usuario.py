@@ -74,12 +74,58 @@ async def editar_usuario(
 
 
 async def eliminar_usuario(
-    uow: UnitOfWorkPort, id: UUID, actor_rol: RolUsuario
+    uow: UnitOfWorkPort, id: UUID, actor_id: UUID, actor_rol: RolUsuario
 ) -> None:
     if actor_rol != RolUsuario.ADMIN:
         raise AuthorizationError("Solo un administrador puede eliminar usuarios")
+    if id == actor_id:
+        raise AuthorizationError("No podés eliminar tu propia cuenta")
     await uow.usuarios.remove(id)
     await uow.commit()
+
+
+async def activar_usuario(
+    uow: UnitOfWorkPort, id: UUID, actor_id: UUID, actor_rol: RolUsuario
+) -> UsuarioApp:
+    if actor_rol != RolUsuario.ADMIN:
+        raise AuthorizationError("Solo un administrador puede activar usuarios")
+    existente = await uow.usuarios.get(id)
+    actualizado = UsuarioApp(
+        id=existente.id,
+        nombre=existente.nombre,
+        password_hash=existente.password_hash,
+        rol=existente.rol,
+        email=existente.email,
+        activo=True,
+        creado_en=existente.creado_en,
+        actualizado_en=existente.actualizado_en,
+    )
+    resultado = await uow.usuarios.update(actualizado)
+    await uow.commit()
+    return resultado
+
+
+async def desactivar_usuario(
+    uow: UnitOfWorkPort, id: UUID, actor_id: UUID, actor_rol: RolUsuario
+) -> UsuarioApp:
+    if actor_rol != RolUsuario.ADMIN:
+        raise AuthorizationError("Solo un administrador puede desactivar usuarios")
+    if id == actor_id:
+        raise AuthorizationError("No podés desactivar tu propia cuenta")
+    existente = await uow.usuarios.get(id)
+    actualizado = UsuarioApp(
+        id=existente.id,
+        nombre=existente.nombre,
+        password_hash=existente.password_hash,
+        rol=existente.rol,
+        email=existente.email,
+        activo=False,
+        creado_en=existente.creado_en,
+        actualizado_en=existente.actualizado_en,
+    )
+    resultado = await uow.usuarios.update(actualizado)
+    await uow.commit()
+    return resultado
 
 
 async def autenticar_usuario(

@@ -24,7 +24,9 @@ from src.ui.session import (
 @ui.page("/")
 async def index() -> None:
     user = get_current_user()
-    if user is None:
+    if user is None or user.get("id") is None:
+        if user is not None:
+            clear_current_user()
         await _render_login()
     else:
         await _render_app(user)
@@ -43,7 +45,7 @@ async def _render_login() -> None:
             except AuthorizationError:
                 ui.notify("Credenciales inválidas", type="negative")
                 return
-            set_current_user(u.nombre, u.rol)
+            set_current_user(u.id, u.nombre, u.rol)
             ui.notify(f"Bienvenido {u.nombre}", type="positive")
             ui.navigate.reload()
 

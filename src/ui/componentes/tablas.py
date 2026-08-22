@@ -12,6 +12,7 @@ OnSubmit = Callable[[dict, dict | None], Awaitable[None]]
 OnDelete = Callable[[dict], Awaitable[None]]
 GetInitial = Callable[[dict], dict]
 Loader = Callable[[], Awaitable[list[dict]]]
+RowAction = Callable[[dict], Awaitable[None]]
 
 
 class CrudPanel:
@@ -26,6 +27,7 @@ class CrudPanel:
         on_submit: OnSubmit,
         on_delete: OnDelete | None = None,
         get_initial: GetInitial | None = None,
+        row_actions: list[tuple[str, RowAction]] | None = None,
     ) -> None:
         self.title = title
         self.columns = columns
@@ -35,6 +37,7 @@ class CrudPanel:
         self.on_submit = on_submit
         self.on_delete = on_delete
         self.get_initial = get_initial
+        self.row_actions = row_actions
         self.table: ui.table | None = None
 
     async def render(self) -> None:
@@ -51,6 +54,8 @@ class CrudPanel:
                     ui.button("Editar", on_click=self._open_edit)
                 if self.on_delete is not None:
                     ui.button("Eliminar", on_click=self._delete_selected)
+                for label, action in self.row_actions or []:
+                    ui.button(label, on_click=lambda a=action: self._run_row_action(a))
 
     def _selected(self) -> dict | None:
         sel = self.table.selected if self.table is not None else None
@@ -94,6 +99,14 @@ class CrudPanel:
             ui.notify("Seleccioná una fila", type="warning")
             return
         await self.on_delete(row)
+        await self._refresh()
+
+    async def _run_row_action(self, action: RowAction) -> None:
+        row = self._selected()
+        if row is None:
+            ui.notify("Seleccioná una fila", type="warning")
+            return
+        await action(row)
         await self._refresh()
 
     async def _refresh(self) -> None:

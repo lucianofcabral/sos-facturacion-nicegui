@@ -80,6 +80,11 @@ def test_admin_gate_blocks_usuario_creation():
 def test_usuario_edit_delete_flow():
     async def main():
         async with PostgresUoW() as uow:
+            actor = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="actor", password="secret123", rol=RolUsuario.ADMIN),
+                actor_rol=RolUsuario.ADMIN,
+            )
             u = await usuario.crear_usuario(
                 uow,
                 UsuarioCreate(nombre="admin", password="secret123", rol=RolUsuario.ADMIN),
@@ -89,8 +94,252 @@ def test_usuario_edit_delete_flow():
                 uow, u.id, UsuarioEdit(nombre="root"), actor_rol=RolUsuario.ADMIN
             )
             assert edited.nombre == "root"
-            await usuario.eliminar_usuario(uow, u.id, actor_rol=RolUsuario.ADMIN)
-            assert (await usuario.listar_usuarios(uow)) == []
+            await usuario.eliminar_usuario(
+                uow, u.id, actor_id=actor.id, actor_rol=RolUsuario.ADMIN
+            )
+            assert [x.id for x in await usuario.listar_usuarios(uow)] == [actor.id]
+
+    run_test(main)
+
+
+def test_activar_usuario():
+    async def main():
+        async with PostgresUoW() as uow:
+            actor = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="actor", password="secret123", rol=RolUsuario.ADMIN),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            target = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="target", password="secret123", rol=RolUsuario.USUARIO),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            await usuario.editar_usuario(
+                uow, target.id, UsuarioEdit(activo=False), actor_rol=RolUsuario.ADMIN
+            )
+            activado = await usuario.activar_usuario(
+                uow, target.id, actor_id=actor.id, actor_rol=RolUsuario.ADMIN
+            )
+            assert activado.activo is True
+            assert (await uow.usuarios.get(target.id)).activo is True
+
+    run_test(main)
+
+
+def test_desactivar_usuario():
+    async def main():
+        async with PostgresUoW() as uow:
+            actor = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="actor", password="secret123", rol=RolUsuario.ADMIN),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            target = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="target", password="secret123", rol=RolUsuario.USUARIO),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            desactivado = await usuario.desactivar_usuario(
+                uow, target.id, actor_id=actor.id, actor_rol=RolUsuario.ADMIN
+            )
+            assert desactivado.activo is False
+            assert (await uow.usuarios.get(target.id)).activo is False
+
+    run_test(main)
+
+
+def test_desactivar_usuario_blocked_login():
+    async def main():
+        async with PostgresUoW() as uow:
+            actor = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="actor", password="secret123", rol=RolUsuario.ADMIN),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            target = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="target", password="secret123", rol=RolUsuario.USUARIO),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            await usuario.desactivar_usuario(
+                uow, target.id, actor_id=actor.id, actor_rol=RolUsuario.ADMIN
+            )
+            with pytest.raises(AuthorizationError):
+                await usuario.autenticar_usuario(uow, "target", "secret123")
+
+    run_test(main)
+
+
+def test_reactivar_restaura_login():
+    async def main():
+        async with PostgresUoW() as uow:
+            actor = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="actor", password="secret123", rol=RolUsuario.ADMIN),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            target = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="target", password="secret123", rol=RolUsuario.USUARIO),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            await usuario.desactivar_usuario(
+                uow, target.id, actor_id=actor.id, actor_rol=RolUsuario.ADMIN
+            )
+            with pytest.raises(AuthorizationError):
+                await usuario.autenticar_usuario(uow, "target", "secret123")
+            await usuario.activar_usuario(
+                uow, target.id, actor_id=actor.id, actor_rol=RolUsuario.ADMIN
+            )
+            auth = await usuario.autenticar_usuario(uow, "target", "secret123")
+            assert auth.id == target.id
+
+    run_test(main)
+
+
+def test_non_admin_cannot_activate():
+    async def main():
+        async with PostgresUoW() as uow:
+            target = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="target", password="secret123", rol=RolUsuario.USUARIO),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            non_admin = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="noadmin", password="secret123", rol=RolUsuario.USUARIO),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            await usuario.editar_usuario(
+                uow, target.id, UsuarioEdit(activo=False), actor_rol=RolUsuario.ADMIN
+            )
+            with pytest.raises(AuthorizationError):
+                await usuario.activar_usuario(
+                    uow, target.id, actor_id=non_admin.id, actor_rol=RolUsuario.USUARIO
+                )
+            assert (await uow.usuarios.get(target.id)).activo is False
+
+    run_test(main)
+
+
+def test_non_admin_cannot_deactivate():
+    async def main():
+        async with PostgresUoW() as uow:
+            target = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="target", password="secret123", rol=RolUsuario.USUARIO),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            non_admin = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="noadmin", password="secret123", rol=RolUsuario.USUARIO),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            with pytest.raises(AuthorizationError):
+                await usuario.desactivar_usuario(
+                    uow, target.id, actor_id=non_admin.id, actor_rol=RolUsuario.USUARIO
+                )
+            assert (await uow.usuarios.get(target.id)).activo is True
+
+    run_test(main)
+
+
+def test_non_admin_cannot_delete():
+    async def main():
+        async with PostgresUoW() as uow:
+            target = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="target", password="secret123", rol=RolUsuario.USUARIO),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            non_admin = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="noadmin", password="secret123", rol=RolUsuario.USUARIO),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            with pytest.raises(AuthorizationError):
+                await usuario.eliminar_usuario(
+                    uow, target.id, actor_id=non_admin.id, actor_rol=RolUsuario.USUARIO
+                )
+            assert (await uow.usuarios.get(target.id)).id == target.id
+
+    run_test(main)
+
+
+def test_self_deactivate_forbidden():
+    async def main():
+        async with PostgresUoW() as uow:
+            admin = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="admin", password="secret123", rol=RolUsuario.ADMIN),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            with pytest.raises(AuthorizationError):
+                await usuario.desactivar_usuario(
+                    uow, admin.id, actor_id=admin.id, actor_rol=RolUsuario.ADMIN
+                )
+            assert (await uow.usuarios.get(admin.id)).activo is True
+
+    run_test(main)
+
+
+def test_self_delete_forbidden():
+    async def main():
+        async with PostgresUoW() as uow:
+            admin = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="admin", password="secret123", rol=RolUsuario.ADMIN),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            with pytest.raises(AuthorizationError):
+                await usuario.eliminar_usuario(
+                    uow, admin.id, actor_id=admin.id, actor_rol=RolUsuario.ADMIN
+                )
+            assert (await uow.usuarios.get(admin.id)).id == admin.id
+
+    run_test(main)
+
+
+def test_delete_other_admin_incl_last():
+    async def main():
+        async with PostgresUoW() as uow:
+            actor = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="actor", password="secret123", rol=RolUsuario.ADMIN),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            other = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="otheradmin", password="secret123", rol=RolUsuario.ADMIN),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            await usuario.eliminar_usuario(
+                uow, other.id, actor_id=actor.id, actor_rol=RolUsuario.ADMIN
+            )
+            assert [x.id for x in await usuario.listar_usuarios(uow)] == [actor.id]
+
+    run_test(main)
+
+
+def test_deactivate_other_admin_incl_last():
+    async def main():
+        async with PostgresUoW() as uow:
+            actor = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="actor", password="secret123", rol=RolUsuario.ADMIN),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            other = await usuario.crear_usuario(
+                uow,
+                UsuarioCreate(nombre="otheradmin", password="secret123", rol=RolUsuario.ADMIN),
+                actor_rol=RolUsuario.ADMIN,
+            )
+            desactivado = await usuario.desactivar_usuario(
+                uow, other.id, actor_id=actor.id, actor_rol=RolUsuario.ADMIN
+            )
+            assert desactivado.activo is False
+            assert (await uow.usuarios.get(actor.id)).activo is True
 
     run_test(main)
 

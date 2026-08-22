@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from src.application.use_cases import usuario as uc
 from src.domain.dto.create import UsuarioCreate
 from src.domain.dto.edit import UsuarioEdit
@@ -46,6 +48,7 @@ def _initial(row: dict) -> dict:
 
 async def render(user: dict) -> None:
     actor = RolUsuario(user["rol"])
+    actor_id = UUID(user["id"])
 
     async def _submit(values: dict, row: dict | None) -> None:
         async with PostgresUoW() as uow:
@@ -63,7 +66,7 @@ async def render(user: dict) -> None:
             else:
                 await uc.editar_usuario(
                     uow,
-                    row["id"],
+                    UUID(row["id"]),
                     UsuarioEdit(
                         nombre=values["nombre"],
                         rol=RolUsuario(values["rol"]) if values["rol"] else None,
@@ -75,7 +78,21 @@ async def render(user: dict) -> None:
 
     async def _delete(row: dict) -> None:
         async with PostgresUoW() as uow:
-            await uc.eliminar_usuario(uow, row["id"], actor_rol=actor)
+            await uc.eliminar_usuario(
+                uow, UUID(row["id"]), actor_id=actor_id, actor_rol=actor
+            )
+
+    async def _activar(row: dict) -> None:
+        async with PostgresUoW() as uow:
+            await uc.activar_usuario(
+                uow, UUID(row["id"]), actor_id=actor_id, actor_rol=actor
+            )
+
+    async def _desactivar(row: dict) -> None:
+        async with PostgresUoW() as uow:
+            await uc.desactivar_usuario(
+                uow, UUID(row["id"]), actor_id=actor_id, actor_rol=actor
+            )
 
     panel = CrudPanel(
         title="Usuarios",
@@ -86,5 +103,6 @@ async def render(user: dict) -> None:
         on_submit=_submit,
         on_delete=_delete,
         get_initial=_initial,
+        row_actions=[("Activar", _activar), ("Desactivar", _desactivar)],
     )
     await panel.render()
