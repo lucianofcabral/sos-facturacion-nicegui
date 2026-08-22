@@ -8,6 +8,7 @@ mirror the NOT NULL constraints of the database schema.
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
@@ -53,3 +54,8 @@ class UsuarioCreate(BaseModel):
     password: str = Field(..., min_length=8)
     rol: RolUsuario = RolUsuario.USUARIO
     email: str | None = None
+
+
+class CreateCierre(BaseModel):
+    aumento: Decimal = Field(..., gt=-100)
+    motivo: str | None = None

@@ -1,6 +1,9 @@
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from src.domain.enums import EstadoCierre, OrigenCierre
 
 
 class Periodo(BaseModel):
@@ -56,3 +59,17 @@ class CapitaPeriodo(BaseModel):
 
     periodo: Periodo | None = None
     tipo_servicio: TipoServicio | None = None
+
+
+class Cierre(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: int | None = None
+    periodo_id: int = Field(...)
+    version: int = Field(..., ge=1)
+    estado: EstadoCierre = Field(...)
+    origen: OrigenCierre = Field(...)
+    motivo: str | None = None
+    aumento: Decimal = Field(..., gt=-100)
+    snapshot: dict | None = None
+    creado_en: datetime | None = None

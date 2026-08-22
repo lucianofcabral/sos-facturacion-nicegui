@@ -1,6 +1,7 @@
 from src.domain.dto.create import (
     CreateAlicuota,
     CreateCapitaPeriodo,
+    CreateCierre,
     CreatePeriodo,
     CreateServicio,
     CreateTipoServicio,
@@ -18,6 +19,7 @@ from src.domain.dto.edit import (
 __all__ = [
     "CreateAlicuota",
     "CreateCapitaPeriodo",
+    "CreateCierre",
     "CreatePeriodo",
     "CreateServicio",
     "CreateTipoServicio",

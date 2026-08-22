@@ -2,17 +2,19 @@ CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TYPE rol_usuario AS ENUM ('admin', 'usuario');
+CREATE TYPE estado_cierre AS ENUM ('oficial', 'no_oficial');
+CREATE TYPE origen_cierre AS ENUM ('manual', 'cascada');
 
 
 CREATE TABLE IF NOT EXISTS periodo (
     id        SERIAL PRIMARY KEY,
     nombre    CITEXT NOT NULL CHECK (char_length(nombre) <= 20),
     anio      INTEGER NOT NULL CHECK (anio BETWEEN 2024 AND 2100),
-    mes       INTEGER NOT NULL CHECK (mes BETWEEN 1 AND 12)
+    mes       INTEGER NOT NULL CHECK (mes BETWEEN 1 AND 12),
+    UNIQUE (anio, mes)
 );
 CREATE INDEX IF NOT EXISTS idx_periodo_anio ON periodo (anio);
 CREATE INDEX IF NOT EXISTS idx_periodo_mes ON periodo (mes);
-CREATE INDEX IF NOT EXISTS idx_periodo_anio_mes ON periodo (anio, mes);
 
 CREATE TABLE IF NOT EXISTS tipo_servicio (
     id     SERIAL PRIMARY KEY,
@@ -21,6 +23,21 @@ CREATE TABLE IF NOT EXISTS tipo_servicio (
 );
 CREATE INDEX IF NOT EXISTS idx_tipo_servicio_rama ON tipo_servicio (rama);
 CREATE INDEX IF NOT EXISTS idx_periodo_nombre ON tipo_servicio (nombre);
+
+CREATE TABLE IF NOT EXISTS cierre (
+    id          SERIAL PRIMARY KEY,
+    periodo_id  INTEGER NOT NULL REFERENCES periodo(id),
+    version     INTEGER NOT NULL CHECK (version > 0),
+    estado      estado_cierre NOT NULL,
+    origen      origen_cierre NOT NULL,
+    motivo      TEXT,
+    aumento     NUMERIC(6, 2) NOT NULL CHECK (aumento > -100),
+    snapshot    JSONB,
+    creado_en   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (periodo_id, version)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_cierre_oficial
+    ON cierre (periodo_id) WHERE estado = 'oficial';
 
 CREATE TABLE IF NOT EXISTS alicuota (
     periodo_id        INTEGER NOT NULL REFERENCES periodo(id),
