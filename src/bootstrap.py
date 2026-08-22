@@ -10,11 +10,13 @@ en producción debe moverse a una variable de entorno (.env).
 
 from __future__ import annotations
 
+import os
+
 from src.application.use_cases.usuario import asegurar_admin_inicial
 from src.infrastructure.adapters.uow import PostgresUoW
 
-ADMIN_NOMBRE = "admin"
-ADMIN_PASSWORD = "8235Fexa2022"
+ADMIN_NOMBRE = os.getenv("ADMIN_NOMBRE", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 
 
 async def bootstrap() -> None:
@@ -23,6 +25,9 @@ async def bootstrap() -> None:
     Cualquier fallo (p. ej. la base no está disponible) se registra y se
     continúa: la app arranca igual y el login fallará hasta que se resuelva.
     """
+    if not ADMIN_PASSWORD:
+        print("[bootstrap] ADMIN_PASSWORD no está configurada en .env; no se crea el admin inicial.")
+        return
     try:
         async with PostgresUoW() as uow:
             creado = await asegurar_admin_inicial(uow, ADMIN_NOMBRE, ADMIN_PASSWORD)
