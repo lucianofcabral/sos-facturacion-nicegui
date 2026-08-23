@@ -52,3 +52,38 @@ class ServicioRepositoryPg(PostgresRepository, ServicioRepository):
             await cur.execute(sql, params)
             rows = await cur.fetchall()
         return [self._row_to_entity(r) for r in rows]
+
+    async def reemplazar_por_periodo(
+        self, periodo_id: int, servicios: list[Servicio]
+    ) -> None:
+        """Atomically replace the period's services on the same connection.
+
+        Mirrors ``AlicuotaRepositoryPg.reemplazar_por_periodo``: a raw DELETE
+        scoped to ``periodo_id`` (so an empty set is legal) followed by a single
+        ``executemany`` INSERT. Scope is by period because ``nro_servicio`` is
+        globally unique.
+        """
+        async with self._conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"DELETE FROM {self.table} WHERE periodo_id = %s", (periodo_id,)
+            )
+            if servicios:
+                rows = [
+                    (
+                        s.nro_servicio,
+                        s.codigo_radio,
+                        s.fecha,
+                        s.dominio,
+                        s.cod_productor,
+                        s.periodo_id,
+                        s.tipo_servicio_id,
+                    )
+                    for s in servicios
+                ]
+                await cur.executemany(
+                    f"INSERT INTO {self.table} "
+                    "(nro_servicio, codigo_radio, fecha, dominio, cod_productor, "
+                    "periodo_id, tipo_servicio_id) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    rows,
+                )

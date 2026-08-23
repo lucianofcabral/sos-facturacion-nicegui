@@ -99,6 +99,10 @@ class ServicioRepository(Repository[Servicio], Protocol):
         tipo_servicio_id: int | None = None,
     ) -> list[Servicio]: ...
 
+    def reemplazar_por_periodo(
+        self, periodo_id: int, servicios: list[Servicio]
+    ) -> None: ...
+
 
 class CapitaPeriodoRepository(Repository[CapitaPeriodo], Protocol):
     def get(self, periodo_id: int, tipo_servicio_id: int) -> CapitaPeriodo | None: ...
