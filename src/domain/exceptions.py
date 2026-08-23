@@ -85,6 +85,31 @@ class RecalculoInvalidoError(DomainError):
             super().__init__("Recalculo produjo valor <= 0")
 
 
+class AlicuotaProgresionError(DomainError):
+    """Raised when an alicuota valor breaks the monotonic progression.
+
+    ``inferior`` and ``superior`` are ``(coeficiente, valor)`` tuples describing
+    the bracket where the violation happened, so the UI can show where the
+    alicuota would sit.
+    """
+
+    def __init__(
+        self,
+        tipo_servicio_id: int,
+        *,
+        inferior: tuple[float, float],
+        superior: tuple[float, float],
+    ) -> None:
+        self.tipo_servicio_id = tipo_servicio_id
+        self.inferior = inferior
+        self.superior = superior
+        super().__init__(
+            f"La alícuota rompe la progresión: valor {superior[1]} "
+            f"(coef {superior[0]}) no puede ser inferior a {inferior[1]} "
+            f"(coef {inferior[0]})"
+        )
+
+
 class ImportServiciosError(DomainError):
     """Raised when the Excel service import cannot proceed safely.
 

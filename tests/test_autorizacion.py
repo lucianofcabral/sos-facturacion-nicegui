@@ -89,6 +89,7 @@ def test_alicuota_no_admin_editar_bloqueado():
                     uow,
                     p.id,
                     ts.id,
+                    0.5,
                     EditAlicuota(
                         periodo_id=p.id,
                         tipo_servicio_id=ts.id,

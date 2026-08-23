@@ -1,4 +1,4 @@
-"""Tabla de gestión de Alícuotas (clave compuesta periodo+tipo_servicio)."""
+"""Tabla de gestión de Alícuotas (clave compuesta periodo+tipo_servicio+coeficiente)."""
 
 from __future__ import annotations
 
@@ -28,6 +28,7 @@ FIELDS = [
 async def _load() -> list[dict]:
     async with PostgresUoW() as uow:
         items = await uc.listar_alicuotas(uow)
+    items.sort(key=lambda a: (a.periodo_id, a.tipo_servicio_id, a.coeficiente))
     return [
         {
             "periodo_id": a.periodo_id,
@@ -58,6 +59,7 @@ async def _submit(values: dict, row: dict | None) -> None:
                 uow,
                 row["periodo_id"],
                 row["tipo_servicio_id"],
+                row["coeficiente"],
                 EditAlicuota(
                     periodo_id=values["periodo_id"],
                     tipo_servicio_id=values["tipo_servicio_id"],
@@ -72,7 +74,7 @@ async def _delete(row: dict) -> None:
     rol = get_current_rol()
     async with PostgresUoW() as uow:
         await uc.eliminar_alicuota(
-            uow, row["periodo_id"], row["tipo_servicio_id"], rol=rol
+            uow, row["periodo_id"], row["tipo_servicio_id"], row["coeficiente"], rol=rol
         )
 
 
@@ -91,7 +93,7 @@ async def render(_user: dict) -> None:
         columns=COLUMNS,
         load=_load,
         fields=FIELDS,
-        id_keys=["periodo_id", "tipo_servicio_id"],
+        id_keys=["periodo_id", "tipo_servicio_id", "coeficiente"],
         on_submit=_submit,
         on_delete=_delete,
         get_initial=_initial,

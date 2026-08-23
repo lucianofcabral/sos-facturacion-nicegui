@@ -10,16 +10,31 @@ from src.infrastructure.adapters.repositories._base import PostgresRepository
 class AlicuotaRepositoryPg(PostgresRepository, AlicuotaRepository):
     table = "alicuota"
     entity_type = Alicuota
-    key_fields = ("periodo_id", "tipo_servicio_id")
+    key_fields = ("periodo_id", "tipo_servicio_id", "coeficiente")
     auto_fields = ()
 
-    async def get(self, periodo_id: int, tipo_servicio_id: int) -> Alicuota | None:
+    @staticmethod
+    def _coef_key(coeficiente: float) -> str:
+        """Normalize a float coeficiente to a 6-decimal string.
+
+        The column is NUMERIC(10,6); formatting to 6 decimals makes the equality
+        match the stored value exactly (avoids float binary-representation drift).
+        """
+        return f"{float(coeficiente):.6f}"
+
+    async def get(self, periodo_id: int, tipo_servicio_id: int, coeficiente: float) -> Alicuota | None:
         return await self._fetch_one(
-            periodo_id=periodo_id, tipo_servicio_id=tipo_servicio_id
+            periodo_id=periodo_id,
+            tipo_servicio_id=tipo_servicio_id,
+            coeficiente=self._coef_key(coeficiente),
         )
 
-    async def remove(self, periodo_id: int, tipo_servicio_id: int) -> None:
-        await self._delete(periodo_id=periodo_id, tipo_servicio_id=tipo_servicio_id)
+    async def remove(self, periodo_id: int, tipo_servicio_id: int, coeficiente: float) -> None:
+        await self._delete(
+            periodo_id=periodo_id,
+            tipo_servicio_id=tipo_servicio_id,
+            coeficiente=self._coef_key(coeficiente),
+        )
 
     async def get_by_keys(
         self,
