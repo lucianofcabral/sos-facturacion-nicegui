@@ -12,8 +12,6 @@ import json
 from datetime import date
 from decimal import Decimal
 
-import pytest
-
 from src.application.use_cases.cierre import _construir_snapshot, computar_sintesis
 from src.domain.models.entities import (
     Alicuota,

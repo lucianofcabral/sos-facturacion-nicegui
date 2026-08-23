@@ -8,6 +8,7 @@ resulting valor <= 0 raises before any write happens.
 from __future__ import annotations
 
 import unicodedata
+from collections import Counter
 from decimal import ROUND_HALF_UP, Decimal
 
 from src.domain.dto.create import CreateCierre
@@ -359,6 +360,7 @@ async def _cerrar_y_cascada(
     if demote:
         await uow.cierres.demote_oficial(target.id)
 
+    snapshot = await _armar_snapshot(uow, target, dto.aumento)
     version = await uow.cierres.next_version(target.id)
     cierre = Cierre(
         periodo_id=target.id,
@@ -367,6 +369,7 @@ async def _cerrar_y_cascada(
         origen=OrigenCierre.MANUAL,
         motivo=dto.motivo,
         aumento=dto.aumento,
+        snapshot=snapshot,
     )
     creado = await uow.cierres.add(cierre)
 
@@ -397,6 +400,7 @@ async def _aplicar_cascada(
         nuevas = [a.model_copy(update={"periodo_id": m.id}) for a in recalculadas]
         await uow.alicuotas.reemplazar_por_periodo(m.id, nuevas)
         await uow.cierres.demote_oficial(m.id)
+        snapshot_m = await _armar_snapshot(uow, m, oficial_m.aumento)
         version = await uow.cierres.next_version(m.id)
         await uow.cierres.add(
             Cierre(
@@ -406,5 +410,63 @@ async def _aplicar_cascada(
                 origen=OrigenCierre.CASCADA,
                 motivo=f"cascada por {origen.nombre}",
                 aumento=oficial_m.aumento,
+                snapshot=snapshot_m,
             )
         )
+
+
+async def _armar_snapshot(
+    uow: UnitOfWorkPort, periodo: Periodo, aumento: Decimal
+) -> dict:
+    """Build the 5-sheet snapshot for ``periodo`` from live tables.
+
+    Refetches capitas, servicios, alicuotas and tipos inside the transaction so
+    it sees the just-replaced alicuota set. Used by both closure paths.
+    """
+    capitas = await uow.capitas_periodo.get_by_fields(periodo_id=periodo.id)
+    alicuotas = await uow.alicuotas.get_by_keys(periodo_id=periodo.id)
+    servicios = await uow.servicios.get_by_fields(periodo_id=periodo.id)
+    tipos_list = await uow.tipos_servicio.list()
+    tipos = {t.id: t for t in tipos_list if t.id is not None}
+
+    servicio_conteos = Counter(s.tipo_servicio_id for s in servicios)
+    cuadro = computar_sintesis(
+        capitas, alicuotas, servicio_conteos, tipos, periodo, aumento
+    )
+    return _construir_snapshot(servicios, tipos, cuadro)
+
+
+async def _cuadro_de_cierre(uow: UnitOfWorkPort, c: Cierre) -> dict:
+    """Return a cierre's síntesis cuadro, recomputing on-demand when snapshot is null."""
+    snapshot = c.snapshot
+    if snapshot is not None and isinstance(snapshot.get("sintesis"), dict):
+        return snapshot["sintesis"]
+    periodo = await uow.periodos.get(c.periodo_id)
+    return (await _armar_snapshot(uow, periodo, c.aumento))["sintesis"]
+
+
+async def armar_hoja_sintesis(
+    uow: UnitOfWorkPort, anio: int, mes: int
+) -> dict:
+    """Return the current official cierre's cuadro plus up to 12 previous cuadros.
+
+    Previous cuadros come from each cierre's snapshot; a prior cierre with a null
+    snapshot is recomputed on-demand from tables (legacy parity). Ordered by
+    descending recency.
+    """
+    periodos = await uow.periodos.get_by_anio_mes(anio, mes)
+    if not periodos:
+        return {"actual": None, "previos": []}
+    target = periodos[0]
+
+    oficial_actual = await uow.cierres.get_oficial(target.id)
+    actual = (
+        await _cuadro_de_cierre(uow, oficial_actual)
+        if oficial_actual is not None
+        else None
+    )
+
+    previos: list[dict] = []
+    for c in await uow.cierres.get_oficiales_recientes(target.id, limit=12):
+        previos.append(await _cuadro_de_cierre(uow, c))
+    return {"actual": actual, "previos": previos}
