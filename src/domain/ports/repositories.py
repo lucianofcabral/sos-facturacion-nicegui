@@ -17,6 +17,7 @@ from src.domain.models.entities import (
     Alicuota,
     CapitaPeriodo,
     Cierre,
+    MetricasTipoServicio,
     Periodo,
     Servicio,
     TipoServicio,
@@ -68,6 +69,7 @@ class TipoServicioRepository(Repository[TipoServicio], Protocol):
     def get(self, id: int) -> TipoServicio: ...
     def remove(self, id: int) -> None: ...
     def get_by_codigo(self, codigo: str) -> TipoServicio | None: ...
+    def get_metricas(self, tipo_servicio_id: int) -> MetricasTipoServicio: ...
 
 
 class AlicuotaRepository(Repository[Alicuota], Protocol):

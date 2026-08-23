@@ -38,6 +38,17 @@ class TipoServicio(BaseModel):
     categoria: CategoriaServicio = Field(...)
 
 
+class MetricasTipoServicio(BaseModel):
+    """Read model: derived metrics for a tipo de servicio (not persisted)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    servicios_asociados: int = 0
+    ciclos: int = 0
+    primer_ciclo: str | None = None
+    ultimo_ciclo: str | None = None
+
+
 class Alicuota(BaseModel):
     model_config = ConfigDict(frozen=True)
 

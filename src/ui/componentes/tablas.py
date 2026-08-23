@@ -11,6 +11,7 @@ from src.ui.dialogos import open_form_dialog
 OnSubmit = Callable[[dict, dict | None], Awaitable[None]]
 OnDelete = Callable[[dict], Awaitable[None]]
 GetInitial = Callable[[dict], dict]
+GetEditInfo = Callable[[dict], Awaitable[list[dict]]]
 Loader = Callable[[], Awaitable[list[dict]]]
 RowAction = Callable[[dict], Awaitable[None]]
 
@@ -27,6 +28,7 @@ class CrudPanel:
         on_submit: OnSubmit,
         on_delete: OnDelete | None = None,
         get_initial: GetInitial | None = None,
+        get_edit_info: GetEditInfo | None = None,
         row_actions: list[tuple[str, RowAction]] | None = None,
     ) -> None:
         self.title = title
@@ -37,6 +39,7 @@ class CrudPanel:
         self.on_submit = on_submit
         self.on_delete = on_delete
         self.get_initial = get_initial
+        self.get_edit_info = get_edit_info
         self.row_actions = row_actions
         self.table: ui.table | None = None
 
@@ -80,10 +83,14 @@ class CrudPanel:
             ui.notify("Seleccioná una fila", type="warning")
             return
         initial = self.get_initial(row)
+        info: list[dict] = []
+        if self.get_edit_info is not None:
+            info = await self.get_edit_info(row)
         await open_form_dialog(
             title=f"Editar {self.title}",
             fields=self.fields,
             initial=initial,
+            info=info,
             on_submit=lambda v: self._submit_edit(v, row),
         )
 

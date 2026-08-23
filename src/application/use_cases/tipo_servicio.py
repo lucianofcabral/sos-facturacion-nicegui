@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from src.domain.dto import CreateTipoServicio, EditTipoServicio
-from src.domain.models.entities import TipoServicio
+from src.domain.models.entities import MetricasTipoServicio, TipoServicio
 from src.domain.ports.uow import UnitOfWorkPort
 
 
@@ -20,6 +20,12 @@ async def crear_tipo_servicio(
 
 async def listar_tipos_servicio(uow: UnitOfWorkPort) -> list[TipoServicio]:
     return await uow.tipos_servicio.list()
+
+
+async def metricas_tipo_servicio(
+    uow: UnitOfWorkPort, tipo_servicio_id: int
+) -> MetricasTipoServicio:
+    return await uow.tipos_servicio.get_metricas(tipo_servicio_id)
 
 
 async def editar_tipo_servicio(

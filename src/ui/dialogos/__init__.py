@@ -22,8 +22,10 @@ async def open_form_dialog(
     fields: list[FieldSpec],
     on_submit,
     initial: dict | None = None,
+    info: list[dict] | None = None,
 ) -> None:
     initial = initial or {}
+    info = info or []
 
     def _coerce(field: FieldSpec, raw):
         if raw in (None, ""):
@@ -37,6 +39,8 @@ async def open_form_dialog(
 
     with ui.dialog() as dialog, ui.card().classes("w-96"):
         ui.label(title).classes("text-h6")
+        for item in info:
+            ui.label(f"{item['label']}: {item['value']}").classes("text-caption")
         widgets: dict[str, object] = {}
         for f in fields:
             fk = f["key"]

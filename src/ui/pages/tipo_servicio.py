@@ -92,6 +92,17 @@ def _initial(row: dict) -> dict:
     }
 
 
+async def _edit_info(row: dict) -> list[dict]:
+    async with PostgresUoW() as uow:
+        m = await uc.metricas_tipo_servicio(uow, row["id"])
+    return [
+        {"label": "Servicios asociados", "value": str(m.servicios_asociados)},
+        {"label": "Ciclos donde aparece", "value": str(m.ciclos)},
+        {"label": "Primer ciclo", "value": m.primer_ciclo or "—"},
+        {"label": "Último ciclo", "value": m.ultimo_ciclo or "—"},
+    ]
+
+
 async def render(_user: dict) -> None:
     panel = CrudPanel(
         title="Tipos de servicio",
@@ -102,5 +113,6 @@ async def render(_user: dict) -> None:
         on_submit=_submit,
         on_delete=_delete,
         get_initial=_initial,
+        get_edit_info=_edit_info,
     )
     await panel.render()
