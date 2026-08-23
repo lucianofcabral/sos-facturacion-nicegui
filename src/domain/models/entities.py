@@ -21,6 +21,7 @@ class TipoServicio(BaseModel):
     id: int | None = None
     rama: str = Field(..., max_length=25)
     nombre: str = Field(..., max_length=50)
+    codigo: str = Field(..., max_length=10)
 
 
 class Alicuota(BaseModel):

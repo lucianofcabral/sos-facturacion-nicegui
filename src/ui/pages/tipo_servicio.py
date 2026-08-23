@@ -12,18 +12,23 @@ COLUMNS = [
     {"name": "id", "label": "ID", "field": "id"},
     {"name": "rama", "label": "Rama", "field": "rama"},
     {"name": "nombre", "label": "Nombre", "field": "nombre"},
+    {"name": "codigo", "label": "Código", "field": "codigo"},
 ]
 
 FIELDS = [
     {"key": "rama", "label": "Rama", "type": "text"},
     {"key": "nombre", "label": "Nombre", "type": "text"},
+    {"key": "codigo", "label": "Código", "type": "text"},
 ]
 
 
 async def _load() -> list[dict]:
     async with PostgresUoW() as uow:
         items = await uc.listar_tipos_servicio(uow)
-    return [{"id": t.id, "rama": t.rama, "nombre": t.nombre} for t in items]
+    return [
+        {"id": t.id, "rama": t.rama, "nombre": t.nombre, "codigo": t.codigo}
+        for t in items
+    ]
 
 
 async def _submit(values: dict, row: dict | None) -> None:
@@ -31,13 +36,17 @@ async def _submit(values: dict, row: dict | None) -> None:
         if row is None:
             await uc.crear_tipo_servicio(
                 uow,
-                CreateTipoServicio(rama=values["rama"], nombre=values["nombre"]),
+                CreateTipoServicio(
+                    rama=values["rama"], nombre=values["nombre"], codigo=values["codigo"]
+                ),
             )
         else:
             await uc.editar_tipo_servicio(
                 uow,
                 row["id"],
-                EditTipoServicio(rama=values["rama"], nombre=values["nombre"]),
+                EditTipoServicio(
+                    rama=values["rama"], nombre=values["nombre"], codigo=values["codigo"]
+                ),
             )
 
 
@@ -47,7 +56,7 @@ async def _delete(row: dict) -> None:
 
 
 def _initial(row: dict) -> dict:
-    return {"rama": row["rama"], "nombre": row["nombre"]}
+    return {"rama": row["rama"], "nombre": row["nombre"], "codigo": row["codigo"]}
 
 
 async def render(_user: dict) -> None:

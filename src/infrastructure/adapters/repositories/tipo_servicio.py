@@ -18,5 +18,8 @@ class TipoServicioRepositoryPg(PostgresRepository, TipoServicioRepository):
             raise EntityNotFoundError(self.entity_type.__name__, id)
         return ent
 
+    async def get_by_codigo(self, codigo: str) -> TipoServicio | None:
+        return await self._fetch_one(codigo=codigo)
+
     async def remove(self, id: int) -> None:
         await self._delete(id=id)

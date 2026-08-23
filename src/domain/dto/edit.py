@@ -22,6 +22,7 @@ class EditPeriodo(BaseModel):
 class EditTipoServicio(BaseModel):
     rama: str | None = Field(default=None, max_length=25)
     nombre: str | None = Field(default=None, max_length=50)
+    codigo: str | None = Field(default=None, max_length=10)
 
 
 class EditAlicuota(BaseModel):

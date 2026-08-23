@@ -24,6 +24,7 @@ class CreatePeriodo(BaseModel):
 class CreateTipoServicio(BaseModel):
     rama: str = Field(..., max_length=25)
     nombre: str = Field(..., max_length=50)
+    codigo: str = Field(..., max_length=10)
 
 
 class CreateAlicuota(BaseModel):

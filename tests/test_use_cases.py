@@ -349,7 +349,7 @@ def test_alicuota_bracket_search():
         async with PostgresUoW() as uow:
             per = await periodo.crear_periodo(uow, CreatePeriodo(nombre="Ene-2026", anio=2026, mes=1))
             ts = await tipo_servicio.crear_tipo_servicio(
-                uow, CreateTipoServicio(rama="Agua", nombre="Luz")
+                uow, CreateTipoServicio(rama="Agua", nombre="Luz", codigo="659")
             )
             await alicuota.crear_alicuota(
                 uow,
@@ -371,7 +371,7 @@ def test_capita_periodo_crud():
         async with PostgresUoW() as uow:
             per = await periodo.crear_periodo(uow, CreatePeriodo(nombre="Ene-2026", anio=2026, mes=1))
             ts = await tipo_servicio.crear_tipo_servicio(
-                uow, CreateTipoServicio(rama="Agua", nombre="Agua")
+                uow, CreateTipoServicio(rama="Agua", nombre="Agua", codigo="660")
             )
             cp = await capita_periodo.crear_capita_periodo(
                 uow,

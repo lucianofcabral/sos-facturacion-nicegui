@@ -24,7 +24,7 @@ from src.domain.models.entities import (
 
 
 def _tipo(id: int, nombre: str, rama: str = "Automotores") -> TipoServicio:
-    return TipoServicio(id=id, rama=rama, nombre=nombre)
+    return TipoServicio(id=id, rama=rama, nombre=nombre, codigo=str(id))
 
 
 def _capita(tipo_id: int, capitas: int) -> CapitaPeriodo:
