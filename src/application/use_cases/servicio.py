@@ -72,22 +72,29 @@ async def importar_servicios(
     """Import services from an Excel workbook into ``periodo_id``.
 
     Parses the workbook (single-month validation + sheets 1-3), resolves every
-    ``codigo_radio`` to a ``tipo_servicio.codigo`` (failing before any write on
-    an unknown code), then persists in ONE explicit commit. ``upsert`` matches
-    by ``nro_servicio`` (update existing, insert new, never delete); ``reemplazo``
-    replaces the whole period-scoped set. Never creates or touches a cierre.
+    ``codigo_radio`` to a ``tipo_servicio.codigo`` and persists in ONE explicit
+    commit. Rows whose ``codigo_radio`` maps to no tipo are SKIPPED and reported
+    in ``pendientes`` (list of ``{codigo, filas}``) so the UI can notify and let
+    the user resolve them; parsing errors (mixed months, missing columns, empty
+    cells) still abort before any write. ``upsert`` matches by ``nro_servicio``
+    (update existing, insert new, never delete); ``reemplazo`` replaces the whole
+    period-scoped set with the known rows. Never creates or touches a cierre.
     """
     filas = ImportadorServiciosExcel().leer(archivo)
 
-    codigos = {fila.codigo_radio for fila in filas}
     tipos: dict[str, int] = {}
-    for codigo in codigos:
-        tipo = await uow.tipos_servicio.get_by_codigo(str(int(codigo)))
+    pendientes: list[dict] = []
+    for codigo in sorted({fila.codigo_radio for fila in filas}):
+        tipo = await uow.tipos_servicio.get_by_codigo(codigo)
         if tipo is None or tipo.id is None:
-            raise ImportServiciosError(
-                f"Tipo de servicio desconocido para código {codigo!r}"
+            pendientes.append(
+                {
+                    "codigo": codigo,
+                    "filas": sum(1 for f in filas if f.codigo_radio == codigo),
+                }
             )
-        tipos[str(int(codigo))] = tipo.id
+        else:
+            tipos[codigo] = tipo.id
 
     nuevos = [
         Servicio(
@@ -97,9 +104,10 @@ async def importar_servicios(
             dominio=fila.dominio,
             cod_productor=fila.cod_productor,
             periodo_id=periodo_id,
-            tipo_servicio_id=tipos[str(int(fila.codigo_radio))],
+            tipo_servicio_id=tipos[fila.codigo_radio],
         )
         for fila in filas
+        if fila.codigo_radio in tipos
     ]
 
     if modo == "upsert":
@@ -124,4 +132,9 @@ async def importar_servicios(
         raise ImportServiciosError(f"Modo inválido: {modo!r}")
 
     await uow.commit()
-    return {"creados": creados, "actualizados": actualizados, "eliminados": eliminados}
+    return {
+        "creados": creados,
+        "actualizados": actualizados,
+        "eliminados": eliminados,
+        "pendientes": pendientes,
+    }

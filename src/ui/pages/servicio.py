@@ -137,6 +137,16 @@ async def _render_import() -> None:
                     f"Actualizados: {resultado['actualizados']} · "
                     f"Eliminados: {resultado['eliminados']}"
                 )
+                pendientes = resultado.get("pendientes", [])
+                if pendientes:
+                    codigos = ", ".join(
+                        f"{p['codigo']} ({p['filas']})" for p in pendientes
+                    )
+                    ui.notify(
+                        f"Códigos de radio sin resolver: {codigos}",
+                        type="warning",
+                        timeout=0,
+                    )
             except Exception as exc:
                 ui.notify(f"Error al importar: {exc}", type="negative")
 

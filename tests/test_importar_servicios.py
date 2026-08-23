@@ -10,13 +10,11 @@ from __future__ import annotations
 from datetime import date
 from io import BytesIO
 
-import pytest
 from openpyxl import Workbook
 
 from conftest import run_test
 from src.application.use_cases import periodo, servicio, tipo_servicio
 from src.domain.dto.create import CreatePeriodo, CreateTipoServicio
-from src.domain.exceptions import ImportServiciosError
 from src.domain.models.entities import Servicio
 from src.infrastructure.adapters.uow import PostgresUoW
 
@@ -62,9 +60,9 @@ async def _crear_periodo(uow, anio: int, mes: int, nombre: str):
     )
 
 
-async def _crear_ts(uow, rama: str, nombre: str, codigo: str):
+async def _crear_ts(uow, rama: str, nombre: str, codigo: str, categoria: str = "basico"):
     return await tipo_servicio.crear_tipo_servicio(
-        uow, CreateTipoServicio(rama=rama, nombre=nombre, codigo=codigo)
+        uow, CreateTipoServicio(rama=rama, nombre=nombre, codigo=codigo, categoria=categoria)
     )
 
 
@@ -132,9 +130,9 @@ def test_import_upsert_idempotente():
                 ["S002", "16/10/2024", "XYZ789", "659", "8"],
             ]
             r1 = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert")
-            assert r1 == {"creados": 2, "actualizados": 0, "eliminados": 0}
+            assert r1 == {"creados": 2, "actualizados": 0, "eliminados": 0, "pendientes": []}
             r2 = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert")
-            assert r2 == {"creados": 0, "actualizados": 2, "eliminados": 0}
+            assert r2 == {"creados": 0, "actualizados": 2, "eliminados": 0, "pendientes": []}
             actuales = await uow.servicios.get_by_fields(periodo_id=p.id)
             assert len(actuales) == 2
 
@@ -154,7 +152,7 @@ def test_import_reemplazo_solo_target():
                 ["S002", "16/10/2024", "XYZ789", "659", "8"],
             ]
             r = await servicio.importar_servicios(uow, a.id, _xlsx(filas), "reemplazo")
-            assert r == {"creados": 2, "actualizados": 0, "eliminados": 1}
+            assert r == {"creados": 2, "actualizados": 0, "eliminados": 1, "pendientes": []}
             a_rows = await uow.servicios.get_by_fields(periodo_id=a.id)
             b_rows = await uow.servicios.get_by_fields(periodo_id=b.id)
             assert {s.nro_servicio for s in a_rows} == {"s001", "s002"}
@@ -163,18 +161,41 @@ def test_import_reemplazo_solo_target():
     run_test(main)
 
 
-def test_import_codigo_desconocido_cero_escrituras():
+def test_import_codigo_desconocido_importa_conocidas_y_reporta_pendientes():
     async def main():
         async with PostgresUoW() as uow:
             p = await _crear_periodo(uow, 2026, 1, "Ene")
             await _crear_ts(uow, "Automotores", "Básico", "659")
             filas = [
                 ["S001", "15/10/2024", "ABC123", "659", "7"],
-                ["S002", "16/10/2024", "XYZ789", "999", "8"],  # desconocido
+                ["S002", "16/10/2024", "XYZ789", "61", "8"],  # codigo 61 sin tipo
+                ["S003", "17/10/2024", "LMN456", "61", "9"],  # otro 61
             ]
-            with pytest.raises(ImportServiciosError):
-                await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert")
-            assert await uow.servicios.get_by_fields(periodo_id=p.id) == []
+            r = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert")
+            assert r["creados"] == 1
+            assert r["pendientes"] == [{"codigo": "61", "filas": 2}]
+            actuales = await uow.servicios.get_by_fields(periodo_id=p.id)
+            assert {s.nro_servicio for s in actuales} == {"s001"}
+
+    run_test(main)
+
+
+def test_import_reemplazo_con_pendientes_solo_reemplaza_conocidas():
+    async def main():
+        async with PostgresUoW() as uow:
+            p = await _crear_periodo(uow, 2026, 1, "Ene")
+            ts = await _crear_ts(uow, "Automotores", "Básico", "659")
+            await uow.servicios.add(_servicio("OLD1", p.id, ts.id))
+            filas = [
+                ["S001", "15/10/2024", "ABC123", "659", "7"],
+                ["S002", "16/10/2024", "XYZ789", "61", "8"],
+            ]
+            r = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "reemplazo")
+            assert r["creados"] == 1
+            assert r["eliminados"] == 1
+            assert r["pendientes"] == [{"codigo": "61", "filas": 1}]
+            actuales = await uow.servicios.get_by_fields(periodo_id=p.id)
+            assert {s.nro_servicio for s in actuales} == {"s001"}
 
     run_test(main)
 

@@ -1,9 +1,9 @@
 """Unit tests for the pure síntesis snapshot functions (no DB).
 
 Pins the div-zero guard, bracket lookup, per-tipo/global coefficients, value
-selection at the chosen coefficient, total half-up rounding, name-normalized
-classification (tildes/case, ramas 87/89/90), and the JSON-native snapshot
-builder.
+selection at the chosen coefficient, total half-up rounding, category-based
+classification (basico/completo/vip/rama_87/89/90, independent of the display
+name), and the JSON-native snapshot builder.
 """
 
 from __future__ import annotations
@@ -23,8 +23,21 @@ from src.domain.models.entities import (
 )
 
 
-def _tipo(id: int, nombre: str, rama: str = "Automotores") -> TipoServicio:
-    return TipoServicio(id=id, rama=rama, nombre=nombre, codigo=str(id))
+def _tipo(
+    id: int, categoria: str, nombre: str | None = None, rama: str = "Automotores"
+) -> TipoServicio:
+    if nombre is None:
+        nombre = {
+            "basico": "Básico",
+            "completo": "Completo",
+            "vip": "VIP",
+            "rama_87": "Rama 87",
+            "rama_89": "Rama 89",
+            "rama_90": "Rama 90",
+        }[categoria]
+    return TipoServicio(
+        id=id, rama=rama, nombre=nombre, codigo=str(id), categoria=categoria
+    )
 
 
 def _capita(tipo_id: int, capitas: int) -> CapitaPeriodo:
@@ -56,7 +69,7 @@ def _run(
 
 
 def test_computar_sintesis_counts_and_per_tipo_coef():
-    tipos = {1: _tipo(1, "Básico"), 2: _tipo(2, "Completo"), 3: _tipo(3, "VIP")}
+    tipos = {1: _tipo(1, "basico"), 2: _tipo(2, "completo"), 3: _tipo(3, "vip")}
     capitas = [_capita(1, 10), _capita(2, 5), _capita(3, 2)]
     s = _run(capitas, [], {1: 4, 2: 10, 3: 4}, tipos)
     assert s.capitas_total == 17
@@ -79,7 +92,7 @@ def test_computar_sintesis_counts_and_per_tipo_coef():
 
 
 def test_computar_sintesis_div_zero_per_tipo():
-    tipos = {1: _tipo(1, "Básico"), 2: _tipo(2, "Completo")}
+    tipos = {1: _tipo(1, "basico"), 2: _tipo(2, "completo")}
     capitas = [_capita(1, 0), _capita(2, 5)]
     s = _run(capitas, [], {1: 4, 2: 10}, tipos)
     assert s.coef_uso_basico == Decimal("0")
@@ -87,7 +100,7 @@ def test_computar_sintesis_div_zero_per_tipo():
 
 
 def test_computar_sintesis_div_zero_global():
-    tipos = {1: _tipo(1, "Básico")}
+    tipos = {1: _tipo(1, "basico")}
     s = _run([_capita(1, 0)], [], {1: 0}, tipos)
     assert s.coef_uso == Decimal("0")
     assert s.capitas_total == 0
@@ -97,7 +110,7 @@ def test_computar_sintesis_div_zero_global():
 
 
 def test_computar_sintesis_bracket_lowest_ge():
-    tipos = {1: _tipo(1, "Básico")}
+    tipos = {1: _tipo(1, "basico")}
     alicuotas = [_alicuota(1, 0.5, 100.0), _alicuota(1, 0.6, 120.0), _alicuota(1, 0.7, 140.0)]
     s = _run([_capita(1, 100)], alicuotas, {1: 55}, tipos)  # coef_uso = 0.55
     assert s.coef_indice == Decimal("0.6")
@@ -106,14 +119,14 @@ def test_computar_sintesis_bracket_lowest_ge():
 
 
 def test_computar_sintesis_bracket_fallback_max():
-    tipos = {1: _tipo(1, "Básico")}
+    tipos = {1: _tipo(1, "basico")}
     alicuotas = [_alicuota(1, 0.5, 100.0), _alicuota(1, 0.6, 120.0)]
     s = _run([_capita(1, 10)], alicuotas, {1: 10}, tipos)  # coef_uso = 1.0 > all
     assert s.coef_indice == Decimal("0.6")
 
 
 def test_computar_sintesis_sin_alicuotas_coef_indice_zero():
-    tipos = {1: _tipo(1, "Básico")}
+    tipos = {1: _tipo(1, "basico")}
     s = _run([_capita(1, 10)], [], {1: 4}, tipos)
     assert s.coef_indice == Decimal("0")
     assert s.valor_basico == Decimal("0.00")
@@ -124,7 +137,7 @@ def test_computar_sintesis_sin_alicuotas_coef_indice_zero():
 
 
 def test_computar_sintesis_valores_and_total():
-    tipos = {1: _tipo(1, "Básico")}
+    tipos = {1: _tipo(1, "basico")}
     alicuotas = [_alicuota(1, 0.5, 100.0), _alicuota(1, 0.6, 120.0), _alicuota(1, 0.7, 140.0)]
     s = _run([_capita(1, 10)], alicuotas, {1: 6}, tipos)  # coef_uso = 0.6
     assert s.coef_indice == Decimal("0.6")
@@ -133,7 +146,7 @@ def test_computar_sintesis_valores_and_total():
 
 
 def test_computar_sintesis_total_sums_automotores():
-    tipos = {1: _tipo(1, "Básico"), 2: _tipo(2, "Completo"), 3: _tipo(3, "VIP")}
+    tipos = {1: _tipo(1, "basico"), 2: _tipo(2, "completo"), 3: _tipo(3, "vip")}
     alicuotas = [
         _alicuota(1, 0.6, 120.0),
         _alicuota(2, 0.6, 130.0),
@@ -145,7 +158,7 @@ def test_computar_sintesis_total_sums_automotores():
 
 
 def test_computar_sintesis_tipo_faltante_valor_zero():
-    tipos = {1: _tipo(1, "Básico"), 2: _tipo(2, "Completo"), 3: _tipo(3, "VIP")}
+    tipos = {1: _tipo(1, "basico"), 2: _tipo(2, "completo"), 3: _tipo(3, "vip")}
     alicuotas = [_alicuota(1, 0.6, 120.0), _alicuota(2, 0.6, 130.0)]  # sin VIP
     capitas = [_capita(1, 10), _capita(2, 5), _capita(3, 2)]
     s = _run(capitas, alicuotas, {1: 4, 2: 10, 3: 4}, tipos)
@@ -157,24 +170,24 @@ def test_computar_sintesis_tipo_faltante_valor_zero():
 
 
 def test_computar_sintesis_decimal_half_up():
-    tipos = {1: _tipo(1, "Básico")}
+    tipos = {1: _tipo(1, "basico")}
     alicuotas = [_alicuota(1, 0.5, 10.005)]
     s = _run([_capita(1, 2)], alicuotas, {1: 1}, tipos)  # coef_uso = 0.5
     assert s.valor_basico == Decimal("10.01")
     assert s.total == Decimal("20.02")
 
 
-# --- classification (tildes/case + ramas) -------------------------------------
+# --- classification (category-driven, name-independent) -----------------------
 
 
-def test_computar_sintesis_clasificacion_tildes_case_ramas():
+def test_computar_sintesis_clasificacion_por_categoria():
     tipos = {
-        1: _tipo(1, "Básico"),
-        2: _tipo(2, "COMPLETO"),
+        1: _tipo(1, "basico", nombre="Nombre Arbitrario 123"),  # el nombre no importa
+        2: _tipo(2, "completo"),
         3: _tipo(3, "vip"),
-        4: _tipo(4, "Rama 87"),
-        5: _tipo(5, "rama 89"),
-        6: _tipo(6, "Rama 90"),
+        4: _tipo(4, "rama_87"),
+        5: _tipo(5, "rama_89"),
+        6: _tipo(6, "rama_90"),
     }
     capitas = [
         _capita(1, 10),
@@ -185,7 +198,7 @@ def test_computar_sintesis_clasificacion_tildes_case_ramas():
         _capita(6, 3),
     ]
     s = _run(capitas, [], {1: 4, 2: 10, 3: 4, 4: 0, 5: 0, 6: 0}, tipos)
-    assert s.capitas_basico == 10
+    assert s.capitas_basico == 10  # "Nombre Arbitrario 123" con categoria basico
     assert s.capitas_completo == 5
     assert s.capitas_vip == 2
     assert s.capitas_rama_87 == 1
@@ -195,14 +208,23 @@ def test_computar_sintesis_clasificacion_tildes_case_ramas():
     assert s.servicios_total == 18
 
 
+def test_renombrar_no_cambia_bucket():
+    # Un tipo con categoria basico sigue en el bucket basico aunque su nombre
+    # coincida con "completo": la categoria manda, no el nombre.
+    tipos = {1: _tipo(1, "basico", nombre="Completo")}
+    s = _run([_capita(1, 10)], [], {1: 5}, tipos)
+    assert s.capitas_basico == 10
+    assert s.capitas_completo == 0
+
+
 def test_computar_sintesis_coef_excluye_ramas():
     tipos = {
-        1: _tipo(1, "Básico"),
-        2: _tipo(2, "Completo"),
-        3: _tipo(3, "VIP"),
-        4: _tipo(4, "Rama 87"),
-        5: _tipo(5, "Rama 89"),
-        6: _tipo(6, "Rama 90"),
+        1: _tipo(1, "basico"),
+        2: _tipo(2, "completo"),
+        3: _tipo(3, "vip"),
+        4: _tipo(4, "rama_87"),
+        5: _tipo(5, "rama_89"),
+        6: _tipo(6, "rama_90"),
     }
     capitas = [
         _capita(1, 10),
@@ -226,7 +248,7 @@ def test_computar_sintesis_coef_excluye_ramas():
 
 
 def test_construir_snapshot_5_keys_full_rows():
-    tipos = {1: _tipo(1, "Básico"), 2: _tipo(2, "Completo")}
+    tipos = {1: _tipo(1, "basico"), 2: _tipo(2, "completo")}
     servicios = [
         Servicio(
             nro_servicio="S001",
@@ -298,7 +320,7 @@ def test_construir_snapshot_empty_sheets():
 
 def test_construir_snapshot_sintesis_shape():
     cuadro = _run([_capita(1, 10), _capita(2, 5), _capita(3, 2)], [], {1: 4, 2: 10, 3: 4},
-                  {1: _tipo(1, "Básico"), 2: _tipo(2, "Completo"), 3: _tipo(3, "VIP")})
+                  {1: _tipo(1, "basico"), 2: _tipo(2, "completo"), 3: _tipo(3, "vip")})
     snap = _construir_snapshot([], {}, cuadro)
     sintesis = snap["sintesis"]
     assert sintesis["nombre"] == "Enero 2026"

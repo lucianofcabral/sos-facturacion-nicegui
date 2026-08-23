@@ -83,8 +83,11 @@ def test_seed_writes_correct_counts():
             assert set(by_codigo) == {"659", "660", "658", "87", "89", "90"}
             assert by_codigo["659"].nombre == "Básico"
             assert by_codigo["659"].rama == "Automotores"
+            assert by_codigo["659"].categoria.value == "basico"
+            assert by_codigo["658"].categoria.value == "vip"
             assert by_codigo["87"].nombre == "Rama 87"
             assert by_codigo["87"].rama == "Ramas Varias"
+            assert by_codigo["87"].categoria.value == "rama_87"
 
             periodos = await uow.periodos.list()
             assert len(periodos) == 4

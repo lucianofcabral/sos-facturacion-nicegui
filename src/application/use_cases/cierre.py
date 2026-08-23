@@ -7,7 +7,6 @@ resulting valor <= 0 raises before any write happens.
 
 from __future__ import annotations
 
-import unicodedata
 from collections import Counter
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -74,33 +73,15 @@ _SHEET_KEYS = (
 _AUTOMOTORES_BUCKETS = ("basico", "completo", "vip")
 
 
-def _normalizar_nombre(nombre: str) -> str:
-    """NFKD + strip combining marks + casefold, so tildes/case never misclassify."""
-    nfkd = unicodedata.normalize("NFKD", nombre)
-    return "".join(c for c in nfkd if not unicodedata.combining(c)).casefold()
+def _clasificar_tipo(tipo: TipoServicio) -> str:
+    """Return the tipo's calculation category (stable bucket key).
 
-
-def _clasificar_tipo(tipo: TipoServicio) -> str | None:
-    """Classify a ``TipoServicio`` by its normalized name.
-
-    Returns one of ``basico``/``completo``/``vip``/``rama_87``/``rama_89``/
-    ``rama_90`` or ``None`` when the name matches no known bucket. Ramas are
-    checked first because a rama name (e.g. "Rama 87") carries its own number.
+    The bucket comes from ``TipoServicio.categoria`` (controlled vocabulary),
+    never from the ``nombre``: display names can change without affecting
+    grouping, and multiple tipos may share a category (e.g. two "Básico" tipos
+    with different radio codes).
     """
-    nombre = _normalizar_nombre(tipo.nombre)
-    if "87" in nombre:
-        return "rama_87"
-    if "89" in nombre:
-        return "rama_89"
-    if "90" in nombre:
-        return "rama_90"
-    if "basico" in nombre:
-        return "basico"
-    if "completo" in nombre:
-        return "completo"
-    if "vip" in nombre:
-        return "vip"
-    return None
+    return tipo.categoria.value
 
 
 def _dec_str(value: Decimal) -> str:
@@ -127,9 +108,7 @@ def computar_sintesis(
     """
     buckets: dict[str, list[int]] = {}
     for tipo in tipos.values():
-        b = _clasificar_tipo(tipo)
-        if b is not None:
-            buckets.setdefault(b, []).append(tipo.id)
+        buckets.setdefault(_clasificar_tipo(tipo), []).append(tipo.id)
 
     cap_by_tipo = {c.tipo_servicio_id: c.capitas for c in capitas}
 

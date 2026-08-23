@@ -31,6 +31,7 @@ from src.domain.models.entities import (  # noqa: E402
     Periodo,
     TipoServicio,
 )
+from src.domain.enums import CategoriaServicio  # noqa: E402
 from src.infrastructure.adapters.uow import PostgresUoW  # noqa: E402
 # isort: on
 
@@ -49,14 +50,14 @@ _MESES_ES = (
     "DICIEMBRE",
 )
 
-# Seeded tipos: (nombre, rama, codigo). Names must match `_clasificar_tipo`.
+# Seeded tipos: (nombre, rama, codigo, categoria). Names must match `_clasificar_tipo`.
 _TIPOS = (
-    ("Básico", "Automotores", "659"),
-    ("Completo", "Automotores", "660"),
-    ("VIP", "Automotores", "658"),
-    ("Rama 87", "Ramas Varias", "87"),
-    ("Rama 89", "Ramas Varias", "89"),
-    ("Rama 90", "Ramas Varias", "90"),
+    ("Básico", "Automotores", "659", CategoriaServicio.BASICO),
+    ("Completo", "Automotores", "660", CategoriaServicio.COMPLETO),
+    ("VIP", "Automotores", "658", CategoriaServicio.VIP),
+    ("Rama 87", "Ramas Varias", "87", CategoriaServicio.RAMA_87),
+    ("Rama 89", "Ramas Varias", "89", CategoriaServicio.RAMA_89),
+    ("Rama 90", "Ramas Varias", "90", CategoriaServicio.RAMA_90),
 )
 
 # Inicial idPrestacion -> tipo_servicio nombre.
@@ -107,9 +108,9 @@ async def ejecutar_seed(datos: DatosPanel, *, dry_run: bool = False) -> dict:
 
         # fase 1: 6 tipos de servicio
         tipo_ids: dict[str, int] = {}
-        for nombre, rama, codigo in _TIPOS:
+        for nombre, rama, codigo, categoria in _TIPOS:
             t = await uow.tipos_servicio.add(
-                TipoServicio(rama=rama, nombre=nombre, codigo=codigo)
+                TipoServicio(rama=rama, nombre=nombre, codigo=codigo, categoria=categoria)
             )
             assert t.id is not None
             tipo_ids[nombre] = t.id

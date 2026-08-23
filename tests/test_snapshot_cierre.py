@@ -37,9 +37,9 @@ async def _crear_periodo(uow, anio: int, mes: int, nombre: str):
     )
 
 
-async def _crear_ts(uow, rama: str, nombre: str):
+async def _crear_ts(uow, rama: str, nombre: str, categoria: str = "basico"):
     return await tipo_servicio.crear_tipo_servicio(
-        uow, CreateTipoServicio(rama=rama, nombre=nombre, codigo=nombre)
+        uow, CreateTipoServicio(rama=rama, nombre=nombre, codigo=nombre, categoria=categoria)
     )
 
 
@@ -226,9 +226,9 @@ _SHEET_KEYS = {
 async def _armar_periodo_completo(uow, anio, mes, nombre, *, con_servicios=True):
     """Create a period with tipos/capitas/servicios/alicuotas and return it."""
     p = await _crear_periodo(uow, anio, mes, nombre)
-    ts_bas = await _crear_ts(uow, "Automotores", "Básico")
-    ts_com = await _crear_ts(uow, "Automotores", "Completo")
-    ts_vip = await _crear_ts(uow, "Automotores", "VIP")
+    ts_bas = await _crear_ts(uow, "Automotores", "Básico", "basico")
+    ts_com = await _crear_ts(uow, "Automotores", "Completo", "completo")
+    ts_vip = await _crear_ts(uow, "Automotores", "VIP", "vip")
     await _crear_capita(uow, p.id, ts_bas.id, 10)
     await _crear_capita(uow, p.id, ts_com.id, 5)
     await _crear_capita(uow, p.id, ts_vip.id, 2)
@@ -288,7 +288,7 @@ def test_cascade_cierres_snapshotted():
             dic = await _crear_periodo(uow, 2025, 12, "Dic")
             ene = await _crear_periodo(uow, 2026, 1, "Ene")
             feb = await _crear_periodo(uow, 2026, 2, "Feb")
-            ts = await _crear_ts(uow, "Automotores", "Básico")
+            ts = await _crear_ts(uow, "Automotores", "Básico", "basico")
             await _crear_alicuota(uow, dic.id, ts.id, 0.5, 100.0)
             await cierre.cerrar_periodo(uow, dic.id, Decimal("0"))
             await cierre.cerrar_periodo(uow, ene.id, Decimal("10"))

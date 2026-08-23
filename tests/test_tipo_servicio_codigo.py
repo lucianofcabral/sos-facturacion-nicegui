@@ -21,7 +21,7 @@ def test_crear_con_codigo_persiste():
         async with PostgresUoW() as uow:
             ts = await tipo_servicio.crear_tipo_servicio(
                 uow,
-                CreateTipoServicio(rama="Automotores", nombre="Básico", codigo="659"),
+                CreateTipoServicio(rama="Automotores", nombre="Básico", codigo="659", categoria="basico"),
             )
             assert ts.codigo == "659"
             assert ts.id is not None
@@ -36,7 +36,7 @@ def test_get_by_codigo_hit_and_miss():
         async with PostgresUoW() as uow:
             ts = await tipo_servicio.crear_tipo_servicio(
                 uow,
-                CreateTipoServicio(rama="Automotores", nombre="Básico", codigo="659"),
+                CreateTipoServicio(rama="Automotores", nombre="Básico", codigo="659", categoria="basico"),
             )
             hit = await uow.tipos_servicio.get_by_codigo("659")
             assert hit is not None
@@ -51,14 +51,14 @@ def test_codigo_duplicado_raise():
         async with PostgresUoW() as uow:
             await tipo_servicio.crear_tipo_servicio(
                 uow,
-                CreateTipoServicio(rama="Automotores", nombre="Básico", codigo="660"),
+                CreateTipoServicio(rama="Automotores", nombre="Básico", codigo="660", categoria="basico"),
             )
         async with PostgresUoW() as uow:
             with pytest.raises(UniqueViolation):
                 await tipo_servicio.crear_tipo_servicio(
                     uow,
                     CreateTipoServicio(
-                        rama="Automotores", nombre="Completo", codigo="660"
+                        rama="Automotores", nombre="Completo", codigo="660", categoria="completo"
                     ),
                 )
 
@@ -70,7 +70,7 @@ def test_editar_codigo():
         async with PostgresUoW() as uow:
             ts = await tipo_servicio.crear_tipo_servicio(
                 uow,
-                CreateTipoServicio(rama="Automotores", nombre="Básico", codigo="659"),
+                CreateTipoServicio(rama="Automotores", nombre="Básico", codigo="659", categoria="basico"),
             )
             editado = await tipo_servicio.editar_tipo_servicio(
                 uow, ts.id, EditTipoServicio(codigo="661")
@@ -81,3 +81,24 @@ def test_editar_codigo():
             assert await uow.tipos_servicio.get_by_codigo("661") is not None
 
     run_test(main)
+
+
+def test_crear_con_categoria_persiste():
+    async def main():
+        async with PostgresUoW() as uow:
+            ts = await tipo_servicio.crear_tipo_servicio(
+                uow,
+                CreateTipoServicio(rama="Automotores", nombre="Básico", codigo="659", categoria="basico"),
+            )
+            assert ts.categoria.value == "basico"
+            leido = await uow.tipos_servicio.get(ts.id)
+            assert leido.categoria.value == "basico"
+
+    run_test(main)
+
+
+def test_categoria_invalida_rechazada():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        CreateTipoServicio(rama="Automotores", nombre="Básico", codigo="659", categoria="desconocida")

@@ -20,7 +20,10 @@ CREATE TABLE IF NOT EXISTS tipo_servicio (
     id     SERIAL PRIMARY KEY,
     rama   VARCHAR(25) NOT NULL,
     nombre CITEXT NOT NULL CHECK (char_length(nombre) <= 50),
-    codigo VARCHAR(10) NOT NULL UNIQUE
+    codigo VARCHAR(10) NOT NULL UNIQUE,
+    categoria VARCHAR(20) NOT NULL CHECK (
+        categoria IN ('basico', 'completo', 'vip', 'rama_87', 'rama_89', 'rama_90')
+    )
 );
 CREATE INDEX IF NOT EXISTS idx_tipo_servicio_rama ON tipo_servicio (rama);
 CREATE INDEX IF NOT EXISTS idx_periodo_nombre ON tipo_servicio (nombre);

@@ -26,9 +26,9 @@ async def _crear_periodo(uow, anio: int, mes: int, nombre: str):
     )
 
 
-async def _crear_ts(uow, rama: str, nombre: str):
+async def _crear_ts(uow, rama: str, nombre: str, categoria: str = "basico"):
     return await tipo_servicio.crear_tipo_servicio(
-        uow, CreateTipoServicio(rama=rama, nombre=nombre, codigo=nombre)
+        uow, CreateTipoServicio(rama=rama, nombre=nombre, codigo=nombre, categoria=categoria)
     )
 
 

@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.domain.enums import EstadoCierre, OrigenCierre
+from src.domain.enums import CategoriaServicio, EstadoCierre, OrigenCierre
 
 
 class Periodo(BaseModel):
@@ -22,6 +22,7 @@ class TipoServicio(BaseModel):
     rama: str = Field(..., max_length=25)
     nombre: str = Field(..., max_length=50)
     codigo: str = Field(..., max_length=10)
+    categoria: CategoriaServicio = Field(...)
 
 
 class Alicuota(BaseModel):
