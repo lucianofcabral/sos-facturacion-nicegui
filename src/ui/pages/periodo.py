@@ -8,6 +8,7 @@ from src.application.use_cases import cierre as cierre_uc
 from src.application.use_cases import periodo as uc
 from src.domain.dto.create import CreatePeriodo
 from src.domain.dto.edit import EditPeriodo
+from src.domain.exceptions import PeriodoNotClosedError
 from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.componentes.tablas import CrudPanel
 from src.ui.dialogos import open_form_dialog
@@ -75,6 +76,26 @@ async def _cerrar(row: dict) -> None:
     )
 
 
+async def _regenerar(row: dict) -> None:
+    async def _submit(values: dict) -> None:
+        aumento = values["aumento"] if values["aumento"] is not None else 0.0
+        try:
+            async with PostgresUoW() as uow:
+                await cierre_uc.generar_nuevo_cierre(
+                    uow, row["id"], aumento, values["motivo"] or None
+                )
+        except PeriodoNotClosedError:
+            ui.notify("El período no tiene un cierre oficial", type="negative")
+            return
+        ui.notify("Nuevo cierre generado", type="positive")
+
+    await open_form_dialog(
+        title="Generar nuevo cierre",
+        fields=CIERRE_FIELDS,
+        on_submit=_submit,
+    )
+
+
 def _initial(row: dict) -> dict:
     return {"nombre": row["nombre"], "anio": row["anio"], "mes": row["mes"]}
 
@@ -89,6 +110,6 @@ async def render(_user: dict) -> None:
         on_submit=_submit,
         on_delete=_delete,
         get_initial=_initial,
-        row_actions=[("Cerrar período", _cerrar)],
+        row_actions=[("Cerrar período", _cerrar), ("Generar nuevo cierre", _regenerar)],
     )
     await panel.render()
