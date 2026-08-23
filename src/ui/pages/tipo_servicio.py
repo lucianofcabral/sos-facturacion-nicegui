@@ -7,6 +7,7 @@ from src.domain.dto.create import CreateTipoServicio
 from src.domain.dto.edit import EditTipoServicio
 from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.componentes.tablas import CrudPanel
+from src.ui.dialogos.tipo_servicio import TIPO_SERVICIO_FIELDS
 
 COLUMNS = [
     {"name": "id", "label": "ID", "field": "id"},
@@ -14,27 +15,6 @@ COLUMNS = [
     {"name": "nombre", "label": "Nombre", "field": "nombre"},
     {"name": "codigo", "label": "Código", "field": "codigo"},
     {"name": "categoria", "label": "Categoría", "field": "categoria"},
-]
-
-_CATEGORIA_OPTS = [
-    ("basico", "Básico"),
-    ("completo", "Completo"),
-    ("vip", "VIP"),
-    ("rama_87", "Rama 87"),
-    ("rama_89", "Rama 89"),
-    ("rama_90", "Rama 90"),
-]
-
-FIELDS = [
-    {"key": "rama", "label": "Rama", "type": "text"},
-    {"key": "nombre", "label": "Nombre", "type": "text"},
-    {"key": "codigo", "label": "Código", "type": "text"},
-    {
-        "key": "categoria",
-        "label": "Categoría",
-        "type": "select",
-        "options": _CATEGORIA_OPTS,
-    },
 ]
 
 
@@ -97,9 +77,9 @@ async def _edit_info(row: dict) -> list[dict]:
         m = await uc.metricas_tipo_servicio(uow, row["id"])
     return [
         {"label": "Servicios asociados", "value": str(m.servicios_asociados)},
-        {"label": "Ciclos donde aparece", "value": str(m.ciclos)},
-        {"label": "Primer ciclo", "value": m.primer_ciclo or "—"},
-        {"label": "Último ciclo", "value": m.ultimo_ciclo or "—"},
+        {"label": "Periodos donde aparece", "value": str(m.ciclos)},
+        {"label": "Primer periodo", "value": m.primer_ciclo or "—"},
+        {"label": "Último periodo", "value": m.ultimo_ciclo or "—"},
     ]
 
 
@@ -108,7 +88,7 @@ async def render(_user: dict) -> None:
         title="Tipos de servicio",
         columns=COLUMNS,
         load=_load,
-        fields=FIELDS,
+        fields=TIPO_SERVICIO_FIELDS,
         id_keys=["id"],
         on_submit=_submit,
         on_delete=_delete,

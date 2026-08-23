@@ -1,6 +1,6 @@
-"""Vista de ciclos (periodos) en cards paginadas.
+"""Vista de periodos en cards paginadas.
 
-Los ciclos se listan en orden descendente por (anio, mes) con su estado de
+Los periodos se listan en orden descendente por (anio, mes) con su estado de
 cierre y total. El click en una card navega al detalle del periodo.
 """
 
@@ -14,14 +14,9 @@ from src.application.use_cases import periodo as periodo_uc
 from src.domain.dto.create import CreatePeriodo
 from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.dialogos import open_form_dialog
+from src.ui.dialogos.periodo import PERIODO_FIELDS
 
 _PAGE_SIZE = 12
-
-_PERIODO_FIELDS = [
-    {"key": "nombre", "label": "Nombre", "type": "text"},
-    {"key": "anio", "label": "Año", "type": "number", "coerce": "int", "min": 2014, "max": 2100},
-    {"key": "mes", "label": "Mes", "type": "number", "coerce": "int", "min": 1, "max": 12},
-]
 
 
 async def _load() -> list[dict]:
@@ -40,7 +35,7 @@ async def _load() -> list[dict]:
     ]
 
 
-async def _crear_ciclo() -> None:
+async def _crear_periodo() -> None:
     async def _submit(values: dict) -> None:
         async with PostgresUoW() as uow:
             await periodo_uc.crear_periodo(
@@ -49,7 +44,7 @@ async def _crear_ciclo() -> None:
             )
         ui.navigate.reload()
 
-    await open_form_dialog(title="Nuevo ciclo", fields=_PERIODO_FIELDS, on_submit=_submit)
+    await open_form_dialog(title="Nuevo periodo", fields=PERIODO_FIELDS, on_submit=_submit)
 
 
 async def render(_user: dict) -> None:
@@ -58,8 +53,8 @@ async def render(_user: dict) -> None:
 
     with ui.column().classes("w-full gap-4"):
         with ui.row().classes("w-full items-center justify-between"):
-            ui.label("Ciclos").classes("text-h5")
-            ui.button("Nuevo ciclo", on_click=_crear_ciclo)
+            ui.label("Periodos").classes("text-h5")
+            ui.button("Nuevo periodo", on_click=_crear_periodo)
 
         container = ui.row().classes("flex-wrap gap-4")
 

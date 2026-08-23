@@ -27,18 +27,9 @@ from src.domain.dto.edit import EditCapitaPeriodo, EditPeriodo
 from src.domain.exceptions import PeriodoNotClosedError
 from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.dialogos import open_form_dialog
+from src.ui.dialogos.pendientes import resolver_pendientes
+from src.ui.dialogos.periodo import CIERRE_FIELDS, PERIODO_FIELDS
 from src.ui.session import get_current_rol, get_current_user, is_admin
-
-_PERIODO_FIELDS = [
-    {"key": "nombre", "label": "Nombre", "type": "text"},
-    {"key": "anio", "label": "Año", "type": "number", "coerce": "int", "min": 2014, "max": 2100},
-    {"key": "mes", "label": "Mes", "type": "number", "coerce": "int", "min": 1, "max": 12},
-]
-
-_CIERRE_FIELDS = [
-    {"key": "aumento", "label": "Aumento (%)", "type": "number", "coerce": "float", "min": -99.99, "step": 0.01},
-    {"key": "motivo", "label": "Motivo", "type": "text"},
-]
 
 _SERVICIO_COLUMNS = [
     {"name": "nro_servicio", "label": "N° servicio", "field": "nro_servicio"},
@@ -125,7 +116,7 @@ async def _editar_datos(periodo: dict) -> None:
 
     await open_form_dialog(
         title="Editar datos del período",
-        fields=_PERIODO_FIELDS,
+        fields=PERIODO_FIELDS,
         initial={
             "nombre": periodo["nombre"],
             "anio": periodo["anio"],
@@ -153,7 +144,7 @@ async def _cerrar(periodo: dict, *, regenerar: bool) -> None:
         ui.navigate.reload()
 
     titulo = "Regenerar cierre" if regenerar else "Generar cierre"
-    await open_form_dialog(title=titulo, fields=_CIERRE_FIELDS, on_submit=_submit)
+    await open_form_dialog(title=titulo, fields=CIERRE_FIELDS, on_submit=_submit)
 
 
 async def _descargar_excel(periodo: dict) -> None:
@@ -183,22 +174,14 @@ async def _importar(periodo_id: int) -> None:
                 )
             pendientes = resultado.get("pendientes", [])
             if pendientes:
-                detalle = ", ".join(
-                    f"código {p['codigo']} ({p['filas']} filas) en hoja '{p['hoja']}'"
-                    for p in pendientes
-                )
-                ui.notify(
-                    f"Hay servicios que necesitan atención: {detalle}",
-                    type="warning",
-                    timeout=0,
-                )
+                resolver_pendientes(pendientes)
             else:
                 ui.notify(
                     f"Importado: {resultado['creados']} creados, "
                     f"{resultado['actualizados']} actualizados",
                     type="positive",
                 )
-            ui.navigate.reload()
+                ui.navigate.reload()
         except Exception as exc:
             ui.notify(f"Error al importar: {exc}", type="negative")
 
@@ -216,7 +199,7 @@ async def detalle(periodo_id: int) -> None:
     with ui.column().classes("w-full gap-4"):
         with ui.row().classes("w-full items-center justify-between"):
             with ui.row().classes("items-center gap-2"):
-                ui.link("← Ciclos", "/").classes("text-caption")
+                ui.link("← Periodos", "/").classes("text-caption")
                 ui.label(periodo["nombre"]).classes("text-h5")
                 if periodo["cerrado"]:
                     ui.badge("Oficial", color="green")

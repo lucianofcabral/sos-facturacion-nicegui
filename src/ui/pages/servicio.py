@@ -12,6 +12,7 @@ from src.domain.dto.edit import EditServicio
 from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.componentes.combos import periodo_options, tipo_servicio_options
 from src.ui.componentes.tablas import CrudPanel
+from src.ui.dialogos.pendientes import resolver_pendientes
 from src.ui.session import get_current_rol
 
 COLUMNS = [
@@ -144,15 +145,7 @@ async def _render_import() -> None:
                 )
                 pendientes = resultado.get("pendientes", [])
                 if pendientes:
-                    detalle = ", ".join(
-                        f"código {p['codigo']} ({p['filas']} filas) en hoja '{p['hoja']}'"
-                        for p in pendientes
-                    )
-                    ui.notify(
-                        f"Hay servicios que necesitan atención: {detalle}",
-                        type="warning",
-                        timeout=0,
-                    )
+                    resolver_pendientes(pendientes)
             except Exception as exc:
                 ui.notify(f"Error al importar: {exc}", type="negative")
 

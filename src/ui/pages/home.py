@@ -9,9 +9,8 @@ from src.domain.exceptions import AuthorizationError
 from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.pages import alicuota as alicuota_page
 from src.ui.pages import capita_periodo as cp_page
-from src.ui.pages import ciclos as ciclos_page
-from src.ui.pages import periodo as periodo_page
 from src.ui.pages import periodo_detalle  # noqa: F401  (registra /periodo/{id})
+from src.ui.pages import periodos as periodos_page
 from src.ui.pages import servicio as servicio_page
 from src.ui.pages import tipo_servicio as ts_page
 from src.ui.pages import usuario as usuario_page
@@ -64,8 +63,7 @@ async def _render_app(user: dict) -> None:
     with ui.left_drawer(value=True, fixed=True, bordered=True).classes(
         "w-60"
     ), ui.tabs().props("vertical").classes("w-full") as tabs:
-        ui.tab("ciclos", "Ciclos", icon="calendar_month")
-        ui.tab("periodo", "Periodos")
+        ui.tab("periodos", "Periodos", icon="calendar_month")
         ui.tab("ts", "Tipos de servicio")
         ui.tab("alicuota", "Alícuotas")
         ui.tab("servicio", "Servicios")
@@ -73,11 +71,9 @@ async def _render_app(user: dict) -> None:
         if is_admin(user):
             ui.tab("usuario", "Usuarios")
 
-    with ui.tab_panels(tabs, value="ciclos").classes("w-full"):
-        with ui.tab_panel("ciclos"):
-            await ciclos_page.render(user)
-        with ui.tab_panel("periodo"):
-            await periodo_page.render(user)
+    with ui.tab_panels(tabs, value="periodos").classes("w-full"):
+        with ui.tab_panel("periodos"):
+            await periodos_page.render(user)
         with ui.tab_panel("ts"):
             await ts_page.render(user)
         with ui.tab_panel("alicuota"):
