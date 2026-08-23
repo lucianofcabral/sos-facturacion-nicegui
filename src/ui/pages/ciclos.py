@@ -1,8 +1,7 @@
-"""Vista de ciclos (periodos) en cards paginadas + ruta de detalle.
+"""Vista de ciclos (periodos) en cards paginadas.
 
 Los ciclos se listan en orden descendente por (anio, mes) con su estado de
-cierre y total. El detalle completo se implementa en un slice posterior; esta
-ruta queda como placeholder para poder navegar desde las cards.
+cierre y total. El click en una card navega al detalle del periodo.
 """
 
 from __future__ import annotations
@@ -51,14 +50,6 @@ async def _crear_ciclo() -> None:
         ui.navigate.reload()
 
     await open_form_dialog(title="Nuevo ciclo", fields=_PERIODO_FIELDS, on_submit=_submit)
-
-
-@ui.page("/periodo/{periodo_id}")
-async def detalle_periodo(periodo_id: int) -> None:
-    """Placeholder del detalle de periodo (se completa en un slice posterior)."""
-    with ui.column().classes("w-full gap-2"):
-        ui.label(f"Detalle de período #{periodo_id}").classes("text-h5")
-        ui.label("La edición completa del ciclo llega en un slice posterior.")
 
 
 async def render(_user: dict) -> None:

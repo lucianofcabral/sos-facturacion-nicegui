@@ -87,6 +87,16 @@ class CapitaPeriodo(BaseModel):
     tipo_servicio: TipoServicio | None = None
 
 
+class CapitaPeriodoConTipo(BaseModel):
+    """Read model: tipo + su capita para un periodo (not persisted)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    tipo_servicio_id: int
+    tipo_nombre: str
+    capitas: int | None = None
+
+
 class Cierre(BaseModel):
     model_config = ConfigDict(frozen=True)
 

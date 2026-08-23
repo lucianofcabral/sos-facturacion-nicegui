@@ -11,6 +11,7 @@ from src.ui.pages import alicuota as alicuota_page
 from src.ui.pages import capita_periodo as cp_page
 from src.ui.pages import ciclos as ciclos_page
 from src.ui.pages import periodo as periodo_page
+from src.ui.pages import periodo_detalle  # noqa: F401  (registra /periodo/{id})
 from src.ui.pages import servicio as servicio_page
 from src.ui.pages import tipo_servicio as ts_page
 from src.ui.pages import usuario as usuario_page
