@@ -8,6 +8,7 @@ from src.domain.dto.edit import EditAlicuota
 from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.componentes.combos import periodo_options, tipo_servicio_options
 from src.ui.componentes.tablas import CrudPanel
+from src.ui.session import get_current_rol
 
 COLUMNS = [
     {"name": "periodo_id", "label": "Periodo", "field": "periodo_id"},
@@ -39,6 +40,7 @@ async def _load() -> list[dict]:
 
 
 async def _submit(values: dict, row: dict | None) -> None:
+    rol = get_current_rol()
     async with PostgresUoW() as uow:
         if row is None:
             await uc.crear_alicuota(
@@ -49,6 +51,7 @@ async def _submit(values: dict, row: dict | None) -> None:
                     coeficiente=values["coeficiente"],
                     valor=values["valor"],
                 ),
+                rol=rol,
             )
         else:
             await uc.editar_alicuota(
@@ -61,12 +64,16 @@ async def _submit(values: dict, row: dict | None) -> None:
                     coeficiente=values["coeficiente"],
                     valor=values["valor"],
                 ),
+                rol=rol,
             )
 
 
 async def _delete(row: dict) -> None:
+    rol = get_current_rol()
     async with PostgresUoW() as uow:
-        await uc.eliminar_alicuota(uow, row["periodo_id"], row["tipo_servicio_id"])
+        await uc.eliminar_alicuota(
+            uow, row["periodo_id"], row["tipo_servicio_id"], rol=rol
+        )
 
 
 def _initial(row: dict) -> dict:

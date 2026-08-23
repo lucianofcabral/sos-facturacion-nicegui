@@ -14,7 +14,7 @@ from psycopg.errors import UniqueViolation
 from conftest import run_test
 from src.application.use_cases import alicuota, cierre, periodo, tipo_servicio
 from src.domain.dto.create import CreateAlicuota, CreatePeriodo, CreateTipoServicio
-from src.domain.enums import EstadoCierre, OrigenCierre
+from src.domain.enums import EstadoCierre, OrigenCierre, RolUsuario
 from src.domain.exceptions import PeriodoAlreadyClosedError, RecalculoInvalidoError
 from src.domain.models.entities import Alicuota, Cierre
 from src.infrastructure.adapters.uow import PostgresUoW
@@ -41,6 +41,7 @@ async def _crear_alicuota(uow, periodo_id, tipo_servicio_id, coeficiente, valor)
             coeficiente=coeficiente,
             valor=valor,
         ),
+        rol=RolUsuario.ADMIN,
     )
 
 

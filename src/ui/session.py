@@ -26,3 +26,11 @@ def clear_current_user() -> None:
 
 def is_admin(user: dict | None) -> bool:
     return user is not None and user.get("rol") == RolUsuario.ADMIN.value
+
+
+def get_current_rol() -> RolUsuario:
+    """Return the current user's role, defaulting to ``USUARIO`` when logged out."""
+    user = get_current_user()
+    if user is None:
+        return RolUsuario.USUARIO
+    return RolUsuario(user["rol"])

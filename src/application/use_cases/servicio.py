@@ -6,14 +6,19 @@ from io import BytesIO
 from pathlib import Path
 from typing import Literal
 
+from src.application.authorization import requerir_admin
 from src.application.services.excel_servicios import ImportadorServiciosExcel
 from src.domain.dto import CreateServicio, EditServicio
+from src.domain.enums import RolUsuario
 from src.domain.exceptions import ImportServiciosError
 from src.domain.models.entities import Servicio
 from src.domain.ports.uow import UnitOfWorkPort
 
 
-async def crear_servicio(uow: UnitOfWorkPort, dto: CreateServicio) -> Servicio:
+async def crear_servicio(
+    uow: UnitOfWorkPort, dto: CreateServicio, *, rol: RolUsuario
+) -> Servicio:
+    requerir_admin(rol)
     entity = Servicio(
         nro_servicio=dto.nro_servicio,
         codigo_radio=dto.codigo_radio,
@@ -33,8 +38,9 @@ async def listar_servicios(uow: UnitOfWorkPort) -> list[Servicio]:
 
 
 async def editar_servicio(
-    uow: UnitOfWorkPort, nro_servicio: str, dto: EditServicio
+    uow: UnitOfWorkPort, nro_servicio: str, dto: EditServicio, *, rol: RolUsuario
 ) -> Servicio:
+    requerir_admin(rol)
     existente = await uow.servicios.get(nro_servicio)
     actualizado = Servicio(
         nro_servicio=existente.nro_servicio,
@@ -58,7 +64,10 @@ async def editar_servicio(
     return resultado
 
 
-async def eliminar_servicio(uow: UnitOfWorkPort, nro_servicio: str) -> None:
+async def eliminar_servicio(
+    uow: UnitOfWorkPort, nro_servicio: str, *, rol: RolUsuario
+) -> None:
+    requerir_admin(rol)
     await uow.servicios.remove(nro_servicio)
     await uow.commit()
 
@@ -68,18 +77,22 @@ async def importar_servicios(
     periodo_id: int,
     archivo: Path | BytesIO,
     modo: Literal["upsert", "reemplazo"],
+    *,
+    rol: RolUsuario,
 ) -> dict:
     """Import services from an Excel workbook into ``periodo_id``.
 
-    Parses the workbook (single-month validation + sheets 1-3), resolves every
-    ``codigo_radio`` to a ``tipo_servicio.codigo`` and persists in ONE explicit
-    commit. Rows whose ``codigo_radio`` maps to no tipo are SKIPPED and reported
-    in ``pendientes`` (list of ``{codigo, filas}``) so the UI can notify and let
-    the user resolve them; parsing errors (mixed months, missing columns, empty
-    cells) still abort before any write. ``upsert`` matches by ``nro_servicio``
-    (update existing, insert new, never delete); ``reemplazo`` replaces the whole
-    period-scoped set with the known rows. Never creates or touches a cierre.
+    Requires admin. Parses the workbook (single-month validation + sheets 1-3),
+    resolves every ``codigo_radio`` to a ``tipo_servicio.codigo`` and persists in
+    ONE explicit commit. Rows whose ``codigo_radio`` maps to no tipo are SKIPPED
+    and reported in ``pendientes`` (list of ``{codigo, filas}``) so the UI can
+    notify and let the user resolve them; parsing errors (mixed months, missing
+    columns, empty cells) still abort before any write. ``upsert`` matches by
+    ``nro_servicio`` (update existing, insert new, never delete); ``reemplazo``
+    replaces the whole period-scoped set with the known rows. Never creates or
+    touches a cierre.
     """
+    requerir_admin(rol)
     filas = ImportadorServiciosExcel().leer(archivo)
 
     tipos: dict[str, int] = {}

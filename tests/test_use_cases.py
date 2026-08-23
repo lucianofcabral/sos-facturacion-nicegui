@@ -359,6 +359,7 @@ def test_alicuota_bracket_search():
                     coeficiente=0.5,
                     valor=10.0,
                 ),
+                rol=RolUsuario.ADMIN,
             )
             found = await alicuota.buscar_alicuota_por_coeficiente(uow, per.id, ts.id, 0.4)
             assert found is not None and found.coeficiente == 0.5

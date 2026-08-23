@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+from src.application.authorization import requerir_admin
 from src.domain.dto import CreateAlicuota, EditAlicuota
+from src.domain.enums import RolUsuario
 from src.domain.models.entities import Alicuota
 from src.domain.ports.uow import UnitOfWorkPort
 
 
-async def crear_alicuota(uow: UnitOfWorkPort, dto: CreateAlicuota) -> Alicuota:
+async def crear_alicuota(
+    uow: UnitOfWorkPort, dto: CreateAlicuota, *, rol: RolUsuario
+) -> Alicuota:
+    requerir_admin(rol)
     entity = Alicuota(
         periodo_id=dto.periodo_id,
         tipo_servicio_id=dto.tipo_servicio_id,
@@ -28,7 +33,10 @@ async def editar_alicuota(
     periodo_id: int,
     tipo_servicio_id: int,
     dto: EditAlicuota,
+    *,
+    rol: RolUsuario,
 ) -> Alicuota:
+    requerir_admin(rol)
     await uow.alicuotas.get(periodo_id, tipo_servicio_id)  # lanza si no existe
     actualizado = Alicuota(
         periodo_id=periodo_id,
@@ -42,8 +50,9 @@ async def editar_alicuota(
 
 
 async def eliminar_alicuota(
-    uow: UnitOfWorkPort, periodo_id: int, tipo_servicio_id: int
+    uow: UnitOfWorkPort, periodo_id: int, tipo_servicio_id: int, *, rol: RolUsuario
 ) -> None:
+    requerir_admin(rol)
     await uow.alicuotas.remove(periodo_id, tipo_servicio_id)
     await uow.commit()
 

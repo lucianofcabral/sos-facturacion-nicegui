@@ -26,7 +26,7 @@ from src.domain.dto.create import (
     CreateServicio,
     CreateTipoServicio,
 )
-from src.domain.enums import EstadoCierre, OrigenCierre
+from src.domain.enums import EstadoCierre, OrigenCierre, RolUsuario
 from src.domain.models.entities import Cierre
 from src.infrastructure.adapters.uow import PostgresUoW
 
@@ -52,6 +52,7 @@ async def _crear_alicuota(uow, periodo_id, tipo_servicio_id, coeficiente, valor)
             coeficiente=coeficiente,
             valor=valor,
         ),
+        rol=RolUsuario.ADMIN,
     )
 
 
@@ -80,6 +81,7 @@ async def _crear_servicio(
             periodo_id=periodo_id,
             tipo_servicio_id=tipo_servicio_id,
         ),
+        rol=RolUsuario.ADMIN,
     )
 
 

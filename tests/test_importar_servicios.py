@@ -15,6 +15,7 @@ from openpyxl import Workbook
 from conftest import run_test
 from src.application.use_cases import periodo, servicio, tipo_servicio
 from src.domain.dto.create import CreatePeriodo, CreateTipoServicio
+from src.domain.enums import RolUsuario
 from src.domain.models.entities import Servicio
 from src.infrastructure.adapters.uow import PostgresUoW
 
@@ -129,9 +130,9 @@ def test_import_upsert_idempotente():
                 ["S001", "15/10/2024", "ABC123", "659", "7"],
                 ["S002", "16/10/2024", "XYZ789", "659", "8"],
             ]
-            r1 = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert")
+            r1 = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert", rol=RolUsuario.ADMIN)
             assert r1 == {"creados": 2, "actualizados": 0, "eliminados": 0, "pendientes": []}
-            r2 = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert")
+            r2 = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert", rol=RolUsuario.ADMIN)
             assert r2 == {"creados": 0, "actualizados": 2, "eliminados": 0, "pendientes": []}
             actuales = await uow.servicios.get_by_fields(periodo_id=p.id)
             assert len(actuales) == 2
@@ -151,7 +152,7 @@ def test_import_reemplazo_solo_target():
                 ["S001", "15/10/2024", "ABC123", "659", "7"],
                 ["S002", "16/10/2024", "XYZ789", "659", "8"],
             ]
-            r = await servicio.importar_servicios(uow, a.id, _xlsx(filas), "reemplazo")
+            r = await servicio.importar_servicios(uow, a.id, _xlsx(filas), "reemplazo", rol=RolUsuario.ADMIN)
             assert r == {"creados": 2, "actualizados": 0, "eliminados": 1, "pendientes": []}
             a_rows = await uow.servicios.get_by_fields(periodo_id=a.id)
             b_rows = await uow.servicios.get_by_fields(periodo_id=b.id)
@@ -171,7 +172,7 @@ def test_import_codigo_desconocido_importa_conocidas_y_reporta_pendientes():
                 ["S002", "16/10/2024", "XYZ789", "61", "8"],  # codigo 61 sin tipo
                 ["S003", "17/10/2024", "LMN456", "61", "9"],  # otro 61
             ]
-            r = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert")
+            r = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert", rol=RolUsuario.ADMIN)
             assert r["creados"] == 1
             assert r["pendientes"] == [{"codigo": "61", "filas": 2}]
             actuales = await uow.servicios.get_by_fields(periodo_id=p.id)
@@ -190,7 +191,7 @@ def test_import_reemplazo_con_pendientes_solo_reemplaza_conocidas():
                 ["S001", "15/10/2024", "ABC123", "659", "7"],
                 ["S002", "16/10/2024", "XYZ789", "61", "8"],
             ]
-            r = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "reemplazo")
+            r = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "reemplazo", rol=RolUsuario.ADMIN)
             assert r["creados"] == 1
             assert r["eliminados"] == 1
             assert r["pendientes"] == [{"codigo": "61", "filas": 1}]
@@ -206,7 +207,7 @@ def test_import_sin_auto_cierre():
             p = await _crear_periodo(uow, 2026, 1, "Ene")
             await _crear_ts(uow, "Automotores", "Básico", "659")
             filas = [["S001", "15/10/2024", "ABC123", "659", "7"]]
-            await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert")
+            await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert", rol=RolUsuario.ADMIN)
             assert await uow.cierres.get_oficial(p.id) is None
             assert await uow.cierres.list() == []
 

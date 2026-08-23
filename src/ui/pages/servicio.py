@@ -12,6 +12,7 @@ from src.domain.dto.edit import EditServicio
 from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.componentes.combos import periodo_options, tipo_servicio_options
 from src.ui.componentes.tablas import CrudPanel
+from src.ui.session import get_current_rol
 
 COLUMNS = [
     {"name": "nro_servicio", "label": "N° servicio", "field": "nro_servicio"},
@@ -52,6 +53,7 @@ async def _load() -> list[dict]:
 
 
 async def _submit(values: dict, row: dict | None) -> None:
+    rol = get_current_rol()
     async with PostgresUoW() as uow:
         if row is None:
             await uc.crear_servicio(
@@ -65,6 +67,7 @@ async def _submit(values: dict, row: dict | None) -> None:
                     periodo_id=values["periodo_id"],
                     tipo_servicio_id=values["tipo_servicio_id"],
                 ),
+                rol=rol,
             )
         else:
             await uc.editar_servicio(
@@ -79,12 +82,14 @@ async def _submit(values: dict, row: dict | None) -> None:
                     periodo_id=values["periodo_id"],
                     tipo_servicio_id=values["tipo_servicio_id"],
                 ),
+                rol=rol,
             )
 
 
 async def _delete(row: dict) -> None:
+    rol = get_current_rol()
     async with PostgresUoW() as uow:
-        await uc.eliminar_servicio(uow, row["nro_servicio"])
+        await uc.eliminar_servicio(uow, row["nro_servicio"], rol=rol)
 
 
 def _initial(row: dict) -> dict:
@@ -130,7 +135,7 @@ async def _render_import() -> None:
             try:
                 async with PostgresUoW() as uow:
                     resultado = await uc.importar_servicios(
-                        uow, periodo.value, archivo, modo.value
+                        uow, periodo.value, archivo, modo.value, rol=get_current_rol()
                     )
                 resumen.set_text(
                     f"Creados: {resultado['creados']} · "
