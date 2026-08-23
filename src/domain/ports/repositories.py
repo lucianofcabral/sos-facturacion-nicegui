@@ -116,6 +116,12 @@ class CierreRepository(Repository[Cierre], Protocol):
     def get_oficial(self, periodo_id: int) -> Cierre | None: ...
     def demote_oficial(self, periodo_id: int) -> None: ...
 
+    def get_oficiales_recientes(
+        self, periodo_id: int, limit: int = 12
+    ) -> list[Cierre]:
+        """Official cierres of periods strictly before ``periodo_id``, desc."""
+        ...
+
 
 class UsuarioAppRepository(Repository[UsuarioApp], Protocol):
     def get(self, id: UUID) -> UsuarioApp:
