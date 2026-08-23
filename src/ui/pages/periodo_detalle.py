@@ -29,7 +29,12 @@ from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.dialogos import open_form_dialog
 from src.ui.dialogos.pendientes import resolver_pendientes
 from src.ui.dialogos.periodo import CIERRE_FIELDS, PERIODO_FIELDS
-from src.ui.session import get_current_rol, get_current_user, is_admin
+from src.ui.session import (
+    get_current_rol,
+    get_current_user,
+    is_admin,
+    usuario_autenticado,
+)
 
 _SERVICIO_COLUMNS = [
     {"name": "nro_servicio", "label": "N° servicio", "field": "nro_servicio"},
@@ -192,6 +197,9 @@ async def _importar(periodo_id: int) -> None:
 
 @ui.page("/periodo/{periodo_id}")
 async def detalle(periodo_id: int) -> None:
+    if not usuario_autenticado():
+        ui.navigate.to("/")
+        return
     periodo = await _load_periodo(periodo_id)
     user = get_current_user()
     es_admin = is_admin(user)

@@ -19,18 +19,16 @@ from src.ui.session import (
     get_current_user,
     is_admin,
     set_current_user,
+    usuario_autenticado,
 )
 
 
 @ui.page("/")
 async def index() -> None:
-    user = get_current_user()
-    if user is None or user.get("id") is None:
-        if user is not None:
-            clear_current_user()
-        await _render_login()
+    if usuario_autenticado():
+        await _render_app(get_current_user())
     else:
-        await _render_app(user)
+        await _render_login()
 
 
 async def _render_login() -> None:

@@ -20,6 +20,21 @@ def get_current_user() -> dict | None:
     return app.storage.user.get(_KEY)
 
 
+def usuario_autenticado() -> bool:
+    """True si hay un usuario logueado con id válido.
+
+    Limpia la sesión si existe un usuario "stale" (dict sin ``id``) para no
+    arrastrar un login inválido entre rutas.
+    """
+    user = get_current_user()
+    if user is None:
+        return False
+    if user.get("id") is None:
+        clear_current_user()
+        return False
+    return True
+
+
 def clear_current_user() -> None:
     app.storage.user.pop(_KEY, None)
 
