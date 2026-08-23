@@ -156,6 +156,21 @@ async def _cerrar(periodo: dict, *, regenerar: bool) -> None:
     await open_form_dialog(title=titulo, fields=_CIERRE_FIELDS, on_submit=_submit)
 
 
+async def _descargar_excel(periodo: dict) -> None:
+    try:
+        async with PostgresUoW() as uow:
+            content = await cierre_uc.descargar_cierre_excel(uow, periodo["id"])
+    except PeriodoNotClosedError:
+        ui.notify("El período no tiene un cierre oficial", type="negative")
+        return
+    filename = f"cierre_{periodo['nombre'].lower().replace(' ', '_')}.xlsx"
+    ui.download(
+        content,
+        filename=filename,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
 async def _importar(periodo_id: int) -> None:
     """Importación de servicios del periodo (solo admin)."""
 
@@ -232,6 +247,9 @@ async def detalle(periodo_id: int) -> None:
                 )
                 ui.button(
                     "Regenerar cierre", on_click=lambda: _cerrar(periodo, regenerar=True)
+                )
+                ui.button(
+                    "Descargar Excel", on_click=lambda: _descargar_excel(periodo)
                 )
             if periodo["total"] is not None:
                 ui.label(f"Total: {periodo['total']}").classes("text-caption")

@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections import Counter
 from decimal import ROUND_HALF_UP, Decimal
 
+from src.application.services.export_cierre import exportar_cierre
 from src.domain.dto.create import CreateCierre
 from src.domain.enums import EstadoCierre, OrigenCierre
 from src.domain.exceptions import (
@@ -462,3 +463,15 @@ async def armar_hoja_sintesis(
     for c in await uow.cierres.get_oficiales_recientes(target.id, limit=12):
         previos.append(await _cuadro_de_cierre(uow, c))
     return {"actual": actual, "previos": previos}
+
+
+async def descargar_cierre_excel(uow: UnitOfWorkPort, periodo_id: int) -> bytes:
+    """Return the official cierre's SOS workbook (5 sheets) as xlsx bytes.
+
+    Raises ``PeriodoNotClosedError`` when the period has no official cierre.
+    """
+    oficial = await uow.cierres.get_oficial(periodo_id)
+    if oficial is None:
+        raise PeriodoNotClosedError(periodo_id)
+    periodo = await uow.periodos.get(periodo_id)
+    return exportar_cierre(oficial.snapshot or {}, periodo.nombre).getvalue()
