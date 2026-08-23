@@ -22,7 +22,7 @@ COLUMNS = [
 
 FIELDS = [
     {"key": "nombre", "label": "Nombre", "type": "text"},
-    {"key": "anio", "label": "Año", "type": "number", "coerce": "int", "min": 2024, "max": 2100},
+    {"key": "anio", "label": "Año", "type": "number", "coerce": "int", "min": 2014, "max": 2100},
     {"key": "mes", "label": "Mes", "type": "number", "coerce": "int", "min": 1, "max": 12},
 ]
 

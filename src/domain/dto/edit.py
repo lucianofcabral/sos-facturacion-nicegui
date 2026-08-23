@@ -15,7 +15,7 @@ from src.domain.enums import RolUsuario
 
 class EditPeriodo(BaseModel):
     nombre: str | None = None
-    anio: int | None = Field(default=None, ge=2024, le=2100)
+    anio: int | None = Field(default=None, ge=2014, le=2100)
     mes: int | None = Field(default=None, ge=1, le=12)
 
 

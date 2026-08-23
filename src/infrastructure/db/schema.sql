@@ -9,7 +9,7 @@ CREATE TYPE origen_cierre AS ENUM ('manual', 'cascada');
 CREATE TABLE IF NOT EXISTS periodo (
     id        SERIAL PRIMARY KEY,
     nombre    CITEXT NOT NULL CHECK (char_length(nombre) <= 20),
-    anio      INTEGER NOT NULL CHECK (anio BETWEEN 2024 AND 2100),
+    anio      INTEGER NOT NULL CHECK (anio BETWEEN 2014 AND 2100),
     mes       INTEGER NOT NULL CHECK (mes BETWEEN 1 AND 12),
     UNIQUE (anio, mes)
 );

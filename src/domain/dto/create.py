@@ -17,7 +17,7 @@ from src.domain.enums import RolUsuario
 
 class CreatePeriodo(BaseModel):
     nombre: str = Field(..., max_length=20)
-    anio: int = Field(..., ge=2024, le=2100)
+    anio: int = Field(..., ge=2014, le=2100)
     mes: int = Field(..., ge=1, le=12)
 
 
