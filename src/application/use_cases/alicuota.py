@@ -34,6 +34,42 @@ def validar_progresion(alicuotas: list[Alicuota]) -> None:
             )
 
 
+def describir_bracket(
+    alicuotas: list[Alicuota], *, coeficiente: float, valor: float
+) -> tuple[bool, str]:
+    """Describe dónde encaja una alícuota candidata en el bracket existente.
+
+    Devuelve ``(ok, mensaje)``. ``ok`` es ``False`` si el ``valor`` rompe la
+    progresión monótona (la alícuota de coeficiente inmediatamente inferior debe
+    tener valor <=, y la superior valor >=). El ``mensaje`` describe el bracket en
+    lenguaje humano para mostrarlo en vivo en el formulario.
+    """
+    inferiores = [a for a in alicuotas if a.coeficiente < coeficiente]
+    superiores = [a for a in alicuotas if a.coeficiente > coeficiente]
+    inferior = max(inferiores, key=lambda a: a.coeficiente) if inferiores else None
+    superior = min(superiores, key=lambda a: a.coeficiente) if superiores else None
+
+    def _f(a: Alicuota) -> str:
+        return f"{a.valor:g} (coef {a.coeficiente:g})"
+
+    problemas: list[str] = []
+    if inferior is not None and valor < inferior.valor:
+        problemas.append(f"menor que {inferior.valor:g} de la alícuota inferior")
+    if superior is not None and valor > superior.valor:
+        problemas.append(f"mayor que {superior.valor:g} de la alícuota superior")
+
+    if problemas:
+        return False, "Rompe progresión: valor " + " y ".join(problemas)
+
+    if inferior is None and superior is None:
+        return True, "Primera alícuota del tipo (sin bracket)"
+    if inferior is not None and superior is not None:
+        return True, f"Encaja entre {_f(inferior)} y {_f(superior)}"
+    if inferior is not None:
+        return True, f"Encaja por encima de {_f(inferior)}"
+    return True, f"Encaja por debajo de {_f(superior)}"
+
+
 async def crear_alicuota(
     uow: UnitOfWorkPort, dto: CreateAlicuota, *, rol: RolUsuario
 ) -> Alicuota:

@@ -14,6 +14,7 @@ GetInitial = Callable[[dict], dict]
 GetEditInfo = Callable[[dict], Awaitable[list[dict]]]
 Loader = Callable[[], Awaitable[list[dict]]]
 RowAction = Callable[[dict], Awaitable[None]]
+OnChange = Callable[[dict, dict | None], Awaitable[str | None]]
 
 
 class CrudPanel:
@@ -30,6 +31,7 @@ class CrudPanel:
         get_initial: GetInitial | None = None,
         get_edit_info: GetEditInfo | None = None,
         row_actions: list[tuple[str, RowAction]] | None = None,
+        on_change: OnChange | None = None,
     ) -> None:
         self.title = title
         self.columns = columns
@@ -41,6 +43,7 @@ class CrudPanel:
         self.get_initial = get_initial
         self.get_edit_info = get_edit_info
         self.row_actions = row_actions
+        self.on_change = on_change
         self.table: ui.table | None = None
 
     async def render(self) -> None:
@@ -71,6 +74,7 @@ class CrudPanel:
             title=f"Nuevo {self.title}",
             fields=self.fields,
             on_submit=self._submit_create,
+            on_change=self._make_on_change(None),
         )
 
     async def _submit_create(self, values: dict) -> None:
@@ -92,7 +96,13 @@ class CrudPanel:
             initial=initial,
             info=info,
             on_submit=lambda v: self._submit_edit(v, row),
+            on_change=self._make_on_change(row),
         )
+
+    def _make_on_change(self, row: dict | None):
+        if self.on_change is None:
+            return None
+        return lambda values: self.on_change(values, row)
 
     async def _submit_edit(self, values: dict, row: dict) -> None:
         await self.on_submit(values, row)

@@ -87,6 +87,30 @@ def _initial(row: dict) -> dict:
     }
 
 
+async def _validar_bracket(values: dict, row: dict | None) -> str | None:
+    """Devuelve un mensaje de advertencia si la alícuota rompe la progresión.
+
+    Compara el candidato contra el bracket existente del (periodo, tipo)
+    seleccionado. En edición se excluye la alícuota que se está editando.
+    """
+    periodo_id = values.get("periodo_id")
+    tipo_id = values.get("tipo_servicio_id")
+    coeficiente = values.get("coeficiente")
+    valor = values.get("valor")
+    if None in (periodo_id, tipo_id, coeficiente, valor):
+        return None
+    async with PostgresUoW() as uow:
+        actuales = await uow.alicuotas.get_by_keys(
+            periodo_id=periodo_id, tipo_servicio_id=tipo_id
+        )
+    if row is not None:
+        actuales = [a for a in actuales if a.coeficiente != row["coeficiente"]]
+    ok, mensaje = uc.describir_bracket(
+        actuales, coeficiente=coeficiente, valor=valor
+    )
+    return None if ok else mensaje
+
+
 async def render(_user: dict) -> None:
     panel = CrudPanel(
         title="Alícuotas",
@@ -97,5 +121,6 @@ async def render(_user: dict) -> None:
         on_submit=_submit,
         on_delete=_delete,
         get_initial=_initial,
+        on_change=_validar_bracket,
     )
     await panel.render()

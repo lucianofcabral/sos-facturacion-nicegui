@@ -23,6 +23,7 @@ async def open_form_dialog(
     on_submit,
     initial: dict | None = None,
     info: list[dict] | None = None,
+    on_change=None,
 ) -> None:
     initial = initial or {}
     info = info or []
@@ -80,6 +81,23 @@ async def open_form_dialog(
                 if fk in initial:
                     inp.value = initial[fk]
                 widgets[fk] = inp
+
+        warning = ui.label("").classes("text-caption text-negative")
+
+        if on_change is not None:
+
+            async def _revalidate(*_args) -> None:
+                values = {
+                    f["key"]: _coerce(f, widgets[f["key"]].value) for f in fields
+                }
+                result = on_change(values)
+                if inspect.isawaitable(result):
+                    result = await result
+                warning.text = result or ""
+
+            for f in fields:
+                widgets[f["key"]].on_value_change(_revalidate)
+            await _revalidate()
 
         with ui.row():
             ui.button("Cancelar", on_click=dialog.close)

@@ -6,7 +6,7 @@ import pytest
 
 from conftest import run_test
 from src.application.use_cases import alicuota, periodo, tipo_servicio
-from src.application.use_cases.alicuota import validar_progresion
+from src.application.use_cases.alicuota import describir_bracket, validar_progresion
 from src.domain.dto.create import (
     CreateAlicuota,
     CreatePeriodo,
@@ -54,6 +54,46 @@ def test_validar_progresion_ok():
 def test_validar_progresion_violacion():
     with pytest.raises(AlicuotaProgresionError):
         validar_progresion([_a(1, 0.4, 10.0), _a(1, 0.6, 5.0)])
+
+
+# --- describir_bracket (puro) -------------------------------------------------
+
+
+def test_describir_bracket_entre_ok():
+    ok, msg = describir_bracket(
+        [_a(1, 0.4, 10.0), _a(1, 0.6, 20.0)], coeficiente=0.5, valor=15.0
+    )
+    assert ok is True
+    assert "Encaja" in msg
+
+
+def test_describir_bracket_rompe_inferior():
+    ok, msg = describir_bracket(
+        [_a(1, 0.4, 10.0), _a(1, 0.6, 20.0)], coeficiente=0.5, valor=5.0
+    )
+    assert ok is False
+    assert "Rompe" in msg
+
+
+def test_describir_bracket_rompe_superior():
+    ok, _ = describir_bracket(
+        [_a(1, 0.4, 10.0), _a(1, 0.6, 20.0)], coeficiente=0.5, valor=99.0
+    )
+    assert ok is False
+
+
+def test_describir_bracket_primera_sin_bracket():
+    ok, msg = describir_bracket([], coeficiente=0.4, valor=10.0)
+    assert ok is True
+    assert "Primera" in msg
+
+
+def test_describir_bracket_limite_sin_superior():
+    bracket = [_a(1, 0.4, 10.0)]
+    ok, _ = describir_bracket(bracket, coeficiente=0.6, valor=20.0)
+    assert ok is True
+    ok2, _ = describir_bracket(bracket, coeficiente=0.6, valor=5.0)
+    assert ok2 is False
 
 
 # --- crear con invariante -----------------------------------------------------
