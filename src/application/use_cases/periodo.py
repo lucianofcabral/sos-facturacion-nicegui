@@ -1,9 +1,11 @@
-"""Use cases for Periodo (CRUD)."""
+"""Use cases for Periodo (CRUD + read model con estado)."""
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from src.domain.dto import CreatePeriodo, EditPeriodo
-from src.domain.models.entities import Periodo
+from src.domain.models.entities import Periodo, PeriodoConEstado
 from src.domain.ports.uow import UnitOfWorkPort
 
 
@@ -16,6 +18,39 @@ async def crear_periodo(uow: UnitOfWorkPort, dto: CreatePeriodo) -> Periodo:
 
 async def listar_periodos(uow: UnitOfWorkPort) -> list[Periodo]:
     return await uow.periodos.list()
+
+
+async def listar_periodos_con_estado(uow: UnitOfWorkPort) -> list[PeriodoConEstado]:
+    """Return periods sorted desc by ``(anio, mes)`` with close state and total.
+
+    ``cerrado`` is True when an official cierre exists; ``total`` is the
+    ``total_a_pagar`` of that cierre's snapshot (or None when absent).
+    """
+    periodos = await uow.periodos.list()
+    periodos.sort(key=lambda p: (p.anio, p.mes), reverse=True)
+
+    resultado: list[PeriodoConEstado] = []
+    for p in periodos:
+        assert p.id is not None
+        oficial = await uow.cierres.get_oficial(p.id)
+        total: Decimal | None = None
+        if oficial is not None and oficial.snapshot:
+            sintesis = oficial.snapshot.get("sintesis")
+            if sintesis:
+                raw = sintesis.get("total_a_pagar")
+                if raw is not None:
+                    total = Decimal(str(raw))
+        resultado.append(
+            PeriodoConEstado(
+                id=p.id,
+                nombre=p.nombre,
+                anio=p.anio,
+                mes=p.mes,
+                cerrado=oficial is not None,
+                total=total,
+            )
+        )
+    return resultado
 
 
 async def editar_periodo(

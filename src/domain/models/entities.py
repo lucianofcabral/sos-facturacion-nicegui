@@ -15,6 +15,19 @@ class Periodo(BaseModel):
     mes: int = Field(..., ge=1, le=12)
 
 
+class PeriodoConEstado(BaseModel):
+    """Read model: periodo + estado de cierre + total (not persisted)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: int
+    nombre: str
+    anio: int
+    mes: int
+    cerrado: bool
+    total: Decimal | None = None
+
+
 class TipoServicio(BaseModel):
     model_config = ConfigDict(frozen=True)
 
