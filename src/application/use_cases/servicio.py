@@ -85,7 +85,7 @@ async def importar_servicios(
     Requires admin. Parses the workbook (single-month validation + sheets 1-3),
     resolves every ``codigo_radio`` to a ``tipo_servicio.codigo`` and persists in
     ONE explicit commit. Rows whose ``codigo_radio`` maps to no tipo are SKIPPED
-    and reported in ``pendientes`` (list of ``{codigo, filas}``) so the UI can
+    and reported in ``pendientes`` (list of ``{codigo, filas, hoja}``) so the UI can
     notify and let the user resolve them; parsing errors (mixed months, missing
     columns, empty cells) still abort before any write. ``upsert`` matches by
     ``nro_servicio`` (update existing, insert new, never delete); ``reemplazo``
@@ -100,10 +100,13 @@ async def importar_servicios(
     for codigo in sorted({fila.codigo_radio for fila in filas}):
         tipo = await uow.tipos_servicio.get_by_codigo(codigo)
         if tipo is None or tipo.id is None:
+            filas_codigo = [f for f in filas if f.codigo_radio == codigo]
+            hojas = sorted({f.hoja for f in filas_codigo if f.hoja})
             pendientes.append(
                 {
                     "codigo": codigo,
-                    "filas": sum(1 for f in filas if f.codigo_radio == codigo),
+                    "filas": len(filas_codigo),
+                    "hoja": ", ".join(hojas),
                 }
             )
         else:

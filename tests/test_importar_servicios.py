@@ -22,6 +22,9 @@ from src.infrastructure.adapters.uow import PostgresUoW
 _HEADER = ["Nº Servicio", "Fecha", "Patente", "Código Radio", "Productor"]
 
 
+_SHEET_NAMES = ["Mes", "659 Básico", "660 Completo", "658 Vip", "Síntesis"]
+
+
 def _xlsx(rows: list[list]) -> BytesIO:
     """Build a 5-sheet workbook with ``rows`` on the first data sheet."""
     wb = Workbook()
@@ -33,8 +36,8 @@ def _xlsx(rows: list[list]) -> BytesIO:
         [_HEADER],
         [["Síntesis"]],
     ]
-    for s in sheets:
-        ws = wb.create_sheet()
+    for name, s in zip(_SHEET_NAMES, sheets):
+        ws = wb.create_sheet(name)
         for row in s:
             ws.append(row)
     buf = BytesIO()
@@ -174,7 +177,7 @@ def test_import_codigo_desconocido_importa_conocidas_y_reporta_pendientes():
             ]
             r = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "upsert", rol=RolUsuario.ADMIN)
             assert r["creados"] == 1
-            assert r["pendientes"] == [{"codigo": "61", "filas": 2}]
+            assert r["pendientes"] == [{"codigo": "61", "filas": 2, "hoja": "659 Básico"}]
             actuales = await uow.servicios.get_by_fields(periodo_id=p.id)
             assert {s.nro_servicio for s in actuales} == {"s001"}
 
@@ -194,7 +197,7 @@ def test_import_reemplazo_con_pendientes_solo_reemplaza_conocidas():
             r = await servicio.importar_servicios(uow, p.id, _xlsx(filas), "reemplazo", rol=RolUsuario.ADMIN)
             assert r["creados"] == 1
             assert r["eliminados"] == 1
-            assert r["pendientes"] == [{"codigo": "61", "filas": 1}]
+            assert r["pendientes"] == [{"codigo": "61", "filas": 1, "hoja": "659 Básico"}]
             actuales = await uow.servicios.get_by_fields(periodo_id=p.id)
             assert {s.nro_servicio for s in actuales} == {"s001"}
 

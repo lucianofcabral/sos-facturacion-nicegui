@@ -30,6 +30,7 @@ class FilaServicio(BaseModel):
     dominio: str | None
     codigo_radio: str
     cod_productor: int
+    hoja: str | None = None
 
 
 # Fuzzy column aliases, keyed by the normalized FilaServicio field name. Headers
@@ -121,7 +122,7 @@ class ImportadorServiciosExcel:
 
             filas: list[FilaServicio] = []
             for name in sheetnames[1:4]:
-                filas.extend(self._leer_hoja(wb[name]))
+                filas.extend(self._leer_hoja(wb[name], name))
             return filas
         finally:
             wb.close()
@@ -145,7 +146,7 @@ class ImportadorServiciosExcel:
                 "La hoja 0 (Mes) contiene fechas de más de un mes"
             )
 
-    def _leer_hoja(self, ws: Worksheet) -> list[FilaServicio]:
+    def _leer_hoja(self, ws: Worksheet, hoja: str) -> list[FilaServicio]:
         header = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), ())
         mapping = _map_columns(header)
         missing = [c for c in _REQUIRED_COLUMNS if c not in mapping]
@@ -156,10 +157,12 @@ class ImportadorServiciosExcel:
         for row in ws.iter_rows(min_row=2, values_only=True):
             if row is None or all(v in (None, "") for v in row):
                 continue
-            filas.append(self._fila_desde_row(row, mapping))
+            filas.append(self._fila_desde_row(row, mapping, hoja))
         return filas
 
-    def _fila_desde_row(self, row: tuple, mapping: dict[str, int]) -> FilaServicio:
+    def _fila_desde_row(
+        self, row: tuple, mapping: dict[str, int], hoja: str
+    ) -> FilaServicio:
         nro = _cell_str(row[mapping["nro_servicio"] - 1]).strip().lower()
         if not nro:
             raise ImportServiciosError("Fila con número de servicio vacío")
@@ -182,6 +185,7 @@ class ImportadorServiciosExcel:
             dominio=dominio,
             codigo_radio=codigo_radio,
             cod_productor=_coerce_int(productor),
+            hoja=hoja,
         )
 
 

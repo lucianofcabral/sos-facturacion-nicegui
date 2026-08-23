@@ -144,11 +144,12 @@ async def _render_import() -> None:
                 )
                 pendientes = resultado.get("pendientes", [])
                 if pendientes:
-                    codigos = ", ".join(
-                        f"{p['codigo']} ({p['filas']})" for p in pendientes
+                    detalle = ", ".join(
+                        f"código {p['codigo']} ({p['filas']} filas) en hoja '{p['hoja']}'"
+                        for p in pendientes
                     )
                     ui.notify(
-                        f"Códigos de radio sin resolver: {codigos}",
+                        f"Hay servicios que necesitan atención: {detalle}",
                         type="warning",
                         timeout=0,
                     )
