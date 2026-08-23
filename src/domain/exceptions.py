@@ -95,3 +95,14 @@ class ImportServiciosError(DomainError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
+
+
+class PanelHistoricoError(DomainError):
+    """Raised when the historical Panel parser cannot proceed safely.
+
+    Covers missing sheets, missing/unknown columns and unparseable cells. Always
+    raised before any write so a failed seed leaves the database untouched.
+    """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
