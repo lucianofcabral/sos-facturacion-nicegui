@@ -1,6 +1,10 @@
-"""Tabla de gestión de Servicios."""
+"""Tabla de gestión de Servicios + importación desde Excel."""
 
 from __future__ import annotations
+
+from io import BytesIO
+
+from nicegui import ui
 
 from src.application.use_cases import servicio as uc
 from src.domain.dto.create import CreateServicio
@@ -107,3 +111,35 @@ async def render(_user: dict) -> None:
         get_initial=_initial,
     )
     await panel.render()
+    await _render_import()
+
+
+async def _render_import() -> None:
+    """Importación de servicios desde un Excel (.xlsx) con modo upsert/reemplazo."""
+    with ui.card().classes("w-full gap-2"):
+        ui.label("Importar servicios desde Excel").classes("text-h6")
+        modo = ui.toggle({"upsert": "Upsert", "reemplazo": "Reemplazo"}, value="upsert")
+        periodo = ui.select(dict(await periodo_options()), label="Periodo")
+        resumen = ui.label("")
+
+        async def _on_upload(e) -> None:
+            if periodo.value is None:
+                ui.notify("Seleccioná un periodo", type="warning")
+                return
+            archivo = BytesIO(await e.file.read())
+            try:
+                async with PostgresUoW() as uow:
+                    resultado = await uc.importar_servicios(
+                        uow, periodo.value, archivo, modo.value
+                    )
+                resumen.set_text(
+                    f"Creados: {resultado['creados']} · "
+                    f"Actualizados: {resultado['actualizados']} · "
+                    f"Eliminados: {resultado['eliminados']}"
+                )
+            except Exception as exc:
+                ui.notify(f"Error al importar: {exc}", type="negative")
+
+        ui.upload(on_upload=_on_upload, auto_upload=True).props(
+            'accept=".xlsx"'
+        ).classes("max-w-full")
