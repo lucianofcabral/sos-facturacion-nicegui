@@ -191,8 +191,35 @@ def test_computar_sintesis_clasificacion_tildes_case_ramas():
     assert s.capitas_rama_87 == 1
     assert s.capitas_rama_89 == 2
     assert s.capitas_rama_90 == 3
-    assert s.capitas_total == 23
+    assert s.capitas_total == 17
     assert s.servicios_total == 18
+
+
+def test_computar_sintesis_coef_excluye_ramas():
+    tipos = {
+        1: _tipo(1, "Básico"),
+        2: _tipo(2, "Completo"),
+        3: _tipo(3, "VIP"),
+        4: _tipo(4, "Rama 87"),
+        5: _tipo(5, "Rama 89"),
+        6: _tipo(6, "Rama 90"),
+    }
+    capitas = [
+        _capita(1, 10),
+        _capita(2, 5),
+        _capita(3, 5),
+        _capita(4, 50),
+        _capita(5, 30),
+        _capita(6, 20),
+    ]
+    # automotores s=10 / c=20; ramas s=100 / c=100 → coef_uso = 10/20
+    s = _run(capitas, [], {1: 4, 2: 4, 3: 2, 4: 50, 5: 30, 6: 20}, tipos)
+    assert s.capitas_total == 20
+    assert s.servicios_total == 10
+    assert s.coef_uso == Decimal("0.5000")
+    assert s.capitas_rama_87 == 50
+    assert s.capitas_rama_89 == 30
+    assert s.capitas_rama_90 == 20
 
 
 # --- _construir_snapshot -------------------------------------------------------

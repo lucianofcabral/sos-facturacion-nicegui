@@ -145,15 +145,12 @@ def computar_sintesis(
     cap_87 = _sum_capitas("rama_87")
     cap_89 = _sum_capitas("rama_89")
     cap_90 = _sum_capitas("rama_90")
-    cap_total = cap_bas + cap_com + cap_vip + cap_87 + cap_89 + cap_90
+    cap_total = cap_bas + cap_com + cap_vip
 
     serv_bas = _sum_servicios("basico")
     serv_com = _sum_servicios("completo")
     serv_vip = _sum_servicios("vip")
-    serv_87 = _sum_servicios("rama_87")
-    serv_89 = _sum_servicios("rama_89")
-    serv_90 = _sum_servicios("rama_90")
-    serv_total = serv_bas + serv_com + serv_vip + serv_87 + serv_89 + serv_90
+    serv_total = serv_bas + serv_com + serv_vip
 
     def _coef(serv: int, cap: int) -> Decimal:
         if cap == 0:
@@ -291,6 +288,7 @@ async def cerrar_periodo(
     periodo_id: int,
     aumento: Decimal | float,
     motivo: str | None = None,
+    servicio_conteos: dict[int, int] | None = None,
 ) -> Cierre:
     """Create the first official cierre for a period and apply recalculated alicuotas.
 
@@ -306,7 +304,9 @@ async def cerrar_periodo(
     if await uow.cierres.get_oficial(periodo_id) is not None:
         raise PeriodoAlreadyClosedError(periodo_id)
 
-    creado, _ = await _cerrar_y_cascada(uow, target, dto, demote=False)
+    creado, _ = await _cerrar_y_cascada(
+        uow, target, dto, demote=False, servicio_conteos=servicio_conteos
+    )
     await uow.commit()
     return creado
 
@@ -316,6 +316,7 @@ async def generar_nuevo_cierre(
     periodo_id: int,
     aumento: Decimal | float,
     motivo: str | None = None,
+    servicio_conteos: dict[int, int] | None = None,
 ) -> Cierre:
     """Re-close an already-official period with a new ``aumento``.
 
@@ -328,7 +329,9 @@ async def generar_nuevo_cierre(
     if await uow.cierres.get_oficial(periodo_id) is None:
         raise PeriodoNotClosedError(periodo_id)
 
-    creado, _ = await _cerrar_y_cascada(uow, target, dto, demote=True)
+    creado, _ = await _cerrar_y_cascada(
+        uow, target, dto, demote=True, servicio_conteos=servicio_conteos
+    )
     await uow.commit()
     return creado
 
@@ -339,6 +342,7 @@ async def _cerrar_y_cascada(
     dto: CreateCierre,
     *,
     demote: bool,
+    servicio_conteos: dict[int, int] | None = None,
 ) -> tuple[Cierre, bool]:
     """Recalculate, (optionally) demote, and insert the cierre for ``target``.
 
@@ -360,7 +364,9 @@ async def _cerrar_y_cascada(
     if demote:
         await uow.cierres.demote_oficial(target.id)
 
-    snapshot = await _armar_snapshot(uow, target, dto.aumento)
+    snapshot = await _armar_snapshot(
+        uow, target, dto.aumento, servicio_conteos=servicio_conteos
+    )
     version = await uow.cierres.next_version(target.id)
     cierre = Cierre(
         periodo_id=target.id,
@@ -416,12 +422,18 @@ async def _aplicar_cascada(
 
 
 async def _armar_snapshot(
-    uow: UnitOfWorkPort, periodo: Periodo, aumento: Decimal
+    uow: UnitOfWorkPort,
+    periodo: Periodo,
+    aumento: Decimal,
+    servicio_conteos: dict[int, int] | None = None,
 ) -> dict:
     """Build the 5-sheet snapshot for ``periodo`` from live tables.
 
     Refetches capitas, servicios, alicuotas and tipos inside the transaction so
-    it sees the just-replaced alicuota set. Used by both closure paths.
+    it sees the just-replaced alicuota set. Used by both closure paths. When
+    ``servicio_conteos`` is injected it becomes the service-count source (so
+    historical snapshots carry real s_* even with an empty ``servicio`` table);
+    otherwise counts derive from the ``servicio`` table as before.
     """
     capitas = await uow.capitas_periodo.get_by_fields(periodo_id=periodo.id)
     alicuotas = await uow.alicuotas.get_by_keys(periodo_id=periodo.id)
@@ -429,10 +441,11 @@ async def _armar_snapshot(
     tipos_list = await uow.tipos_servicio.list()
     tipos = {t.id: t for t in tipos_list if t.id is not None}
 
-    servicio_conteos = Counter(s.tipo_servicio_id for s in servicios)
-    cuadro = computar_sintesis(
-        capitas, alicuotas, servicio_conteos, tipos, periodo, aumento
-    )
+    if servicio_conteos is not None:
+        conteos = servicio_conteos
+    else:
+        conteos = Counter(s.tipo_servicio_id for s in servicios)
+    cuadro = computar_sintesis(capitas, alicuotas, conteos, tipos, periodo, aumento)
     return _construir_snapshot(servicios, tipos, cuadro)
 
 
