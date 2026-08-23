@@ -4,6 +4,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TYPE rol_usuario AS ENUM ('admin', 'usuario');
 CREATE TYPE estado_cierre AS ENUM ('oficial', 'no_oficial');
 CREATE TYPE origen_cierre AS ENUM ('manual', 'cascada');
+CREATE TYPE categoria_servicio AS ENUM (
+    'basico', 'completo', 'vip', 'rama_87', 'rama_89', 'rama_90'
+);
 
 
 CREATE TABLE IF NOT EXISTS periodo (
@@ -21,9 +24,7 @@ CREATE TABLE IF NOT EXISTS tipo_servicio (
     rama   VARCHAR(25) NOT NULL,
     nombre CITEXT NOT NULL CHECK (char_length(nombre) <= 50),
     codigo VARCHAR(10) NOT NULL UNIQUE,
-    categoria VARCHAR(20) NOT NULL CHECK (
-        categoria IN ('basico', 'completo', 'vip', 'rama_87', 'rama_89', 'rama_90')
-    )
+    categoria categoria_servicio NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_tipo_servicio_rama ON tipo_servicio (rama);
 CREATE INDEX IF NOT EXISTS idx_periodo_nombre ON tipo_servicio (nombre);
