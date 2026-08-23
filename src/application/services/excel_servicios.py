@@ -19,6 +19,7 @@ from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from pydantic import BaseModel, ConfigDict
 
+from src.domain.enums import CategoriaServicio
 from src.domain.exceptions import ImportServiciosError
 
 
@@ -47,8 +48,8 @@ _COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
     ),
     "fecha": ("fecha",),
     "dominio": ("patente", "dominio", "dom"),
-    "codigo_radio": ("codigo radio", "cod radio", "codigo", "radio"),
-    "cod_productor": ("productor", "cod productor", "codigo productor"),
+    "codigo_radio": ("codigo radio", "cod radio", "codigo", "radio", "producto"),
+    "cod_productor": ("productor", "cod productor", "codigo productor", "numero de productor"),
 }
 
 _REQUIRED_COLUMNS = ("nro_servicio", "fecha", "dominio", "codigo_radio", "cod_productor")
@@ -59,11 +60,38 @@ def normalizar_texto(value: str) -> str:
 
     NFKD decomposes the ``º`` ordinal indicator to ``o``, so ``"Nº Servicio"``
     normalizes to ``"no servicio"`` (parity with the legacy
-    ``utils.normalizar_texto``).
+    ``utils.normalizar_texto``). The degree sign ``°`` (used by the legacy
+    workbooks as ``"N°Servicio"``) is translated to a space first, so
+    ``"N°Servicio"`` normalizes to ``"n servicio"``.
     """
+    value = value.replace("\u00b0", " ")
     nfkd = unicodedata.normalize("NFKD", value)
     stripped = "".join(c for c in nfkd if not unicodedata.combining(c))
     return " ".join(stripped.lower().split())
+
+
+_CODIGO_A_CATEGORIA = {
+    "658": CategoriaServicio.VIP,
+    "659": CategoriaServicio.BASICO,
+    "660": CategoriaServicio.COMPLETO,
+    "87": CategoriaServicio.RAMA_87,
+    "89": CategoriaServicio.RAMA_89,
+    "90": CategoriaServicio.RAMA_90,
+}
+
+
+def categoria_desde_hoja(hoja: str) -> CategoriaServicio | None:
+    """Devuelve la categoría de cálculo según el prefijo numérico de la hoja.
+
+    La hoja es la pista de resolución de un código desconocido:
+    ``"659 Básico"`` -> ``BASICO``, ``"660 Completo"`` -> ``COMPLETO``,
+    ``"658 Vip"`` -> ``VIP``. Devuelve ``None`` si la hoja no tiene un prefijo
+    conocido (p. ej. ``"Síntesis"``).
+    """
+    match = re.match(r"^\s*(\d+)", hoja or "")
+    if match is None:
+        return None
+    return _CODIGO_A_CATEGORIA.get(match.group(1))
 
 
 def _sanitizar_dominio(value: str) -> str:

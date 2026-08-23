@@ -15,8 +15,10 @@ from openpyxl import Workbook
 from src.application.services.excel_servicios import (
     FilaServicio,
     ImportadorServiciosExcel,
+    categoria_desde_hoja,
     normalizar_texto,
 )
+from src.domain.enums import CategoriaServicio
 from src.domain.exceptions import ImportServiciosError
 
 
@@ -63,6 +65,24 @@ def test_normalizar_texto_tildes_espacios_numero():
     assert normalizar_texto("CÓDIGO  RADIO") == "codigo radio"
     assert normalizar_texto("Patente\tDoble") == "patente doble"
     assert normalizar_texto("Productor") == "productor"
+
+
+def test_normalizar_texto_grado_signo_formato_viejo():
+    # El formato viejo usa "°" (grado) en "N°Servicio", no el ordinal "º".
+    assert normalizar_texto("N°Servicio") == "n servicio"
+    assert normalizar_texto("Número de Productor") == "numero de productor"
+
+
+# --- categoria_desde_hoja ------------------------------------------------------
+
+
+def test_categoria_desde_hoja_prefijo():
+    assert categoria_desde_hoja("659 Básico") is CategoriaServicio.BASICO
+    assert categoria_desde_hoja("660 Completo") is CategoriaServicio.COMPLETO
+    assert categoria_desde_hoja("658 Vip") is CategoriaServicio.VIP
+    assert categoria_desde_hoja("87") is CategoriaServicio.RAMA_87
+    assert categoria_desde_hoja("Síntesis") is None
+    assert categoria_desde_hoja("") is None
 
 
 # --- happy path + normalization ------------------------------------------------
@@ -149,3 +169,34 @@ def test_codigo_radio_vacio_error():
     )
     with pytest.raises(ImportServiciosError):
         ImportadorServiciosExcel().leer(buf)
+
+
+# --- formato viejo (2014-2018): "Producto" como código + "Número de Productor" ---
+
+
+_HEADER_VIEJO = ["N°Servicio", "Fecha", "Dominio", "Producto", "Número de Productor"]
+
+
+def test_leer_formato_viejo_columna_producto():
+    buf = _build_xlsx(
+        [
+            [["fecha"], [date(2014, 7, 2)], [date(2014, 7, 30)]],
+            [
+                _HEADER_VIEJO,
+                ["20140702200913", "02/07/2014", "SVC 636", "61", "0"],
+                ["20140702900111", "02/07/2014", "ABC123", "659", "1978"],
+            ],
+            [_HEADER_VIEJO, ["20140703900222", "03/07/2014", "XYZ 789", "660", "8"]],
+            [_HEADER_VIEJO],
+            [["Síntesis"]],
+        ]
+    )
+    filas = ImportadorServiciosExcel().leer(buf)
+    assert len(filas) == 3
+    assert filas[0].nro_servicio == "20140702200913"
+    assert filas[0].codigo_radio == "61"  # "Producto" se mapea a codigo_radio
+    assert filas[0].cod_productor == 0
+    assert filas[1].codigo_radio == "659"
+    assert filas[1].cod_productor == 1978
+    assert filas[2].codigo_radio == "660"
+    assert filas[2].cod_productor == 8
