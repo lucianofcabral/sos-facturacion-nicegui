@@ -83,3 +83,15 @@ class RecalculoInvalidoError(DomainError):
             )
         else:
             super().__init__("Recalculo produjo valor <= 0")
+
+
+class ImportServiciosError(DomainError):
+    """Raised when the Excel service import cannot proceed safely.
+
+    Covers mixed months in sheet 0, missing/unknown columns, empty required
+    cells and unmapped ``codigo_radio``. Always raised before any write so the
+    import leaves the database untouched.
+    """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
