@@ -73,3 +73,43 @@ class Cierre(BaseModel):
     aumento: Decimal = Field(..., gt=-100)
     snapshot: dict | None = None
     creado_en: datetime | None = None
+
+
+class SintesisPeriodo(BaseModel):
+    """Read-model for the snapshot síntesis cuadro (not persisted).
+
+    Frozen like the rest of the domain. Decimal for coefficients, values and
+    total (spec requires ROUND_HALF_UP to 2dp); int for capitas and service
+    counts. Per-tipo coefficients are kept as informational values while the
+    global ``coef_uso`` drives the bracket lookup.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    aumento: Decimal
+
+    capitas_total: int = 0
+    capitas_basico: int = 0
+    capitas_completo: int = 0
+    capitas_vip: int = 0
+    capitas_rama_87: int = 0
+    capitas_rama_89: int = 0
+    capitas_rama_90: int = 0
+
+    servicios_total: int = 0
+    servicios_basico: int = 0
+    servicios_completo: int = 0
+    servicios_vip: int = 0
+
+    coef_uso: Decimal = Decimal("0")
+    coef_uso_basico: Decimal = Decimal("0")
+    coef_uso_completo: Decimal = Decimal("0")
+    coef_uso_vip: Decimal = Decimal("0")
+    coef_indice: Decimal = Decimal("0")
+
+    valor_basico: Decimal = Decimal("0")
+    valor_completo: Decimal = Decimal("0")
+    valor_vip: Decimal = Decimal("0")
+
+    total: Decimal = Decimal("0")
