@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from psycopg.rows import dict_row
 
-from src.domain.exceptions import EntityNotFoundError
+from src.domain.exceptions import EntityNotFoundError, PeriodoNotClosedError
 from src.domain.models.entities import Cierre
 from src.domain.ports.repositories import CierreRepository
 from src.infrastructure.adapters.repositories._base import PostgresRepository
@@ -43,3 +43,18 @@ class CierreRepositoryPg(PostgresRepository, CierreRepository):
             await cur.execute(sql, (periodo_id,))
             row = await cur.fetchone()
         return self._row_to_entity(row) if row is not None else None
+
+    async def demote_oficial(self, periodo_id: int) -> None:
+        """Demote the period's official cierre to ``no_oficial``.
+
+        Must run before inserting the replacement official cierre because
+        ``uq_cierre_oficial`` is non-deferrable and checked per statement.
+        """
+        sql = (
+            f"UPDATE {self.table} SET estado = 'no_oficial' "
+            f"WHERE periodo_id = %s AND estado = 'oficial'"
+        )
+        async with self._conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(sql, (periodo_id,))
+            if cur.rowcount == 0:
+                raise PeriodoNotClosedError(periodo_id)

@@ -64,6 +64,14 @@ class PeriodoAlreadyClosedError(DomainError):
         super().__init__(f"Periodo id={periodo_id!r} already has an official cierre")
 
 
+class PeriodoNotClosedError(DomainError):
+    """Raised when a period has no official cierre to re-close or demote."""
+
+    def __init__(self, periodo_id: int) -> None:
+        self.periodo_id = periodo_id
+        super().__init__(f"Periodo id={periodo_id!r} has no official cierre")
+
+
 class RecalculoInvalidoError(DomainError):
     """Raised when recalculation would produce a valor <= 0 (after rounding)."""
 
