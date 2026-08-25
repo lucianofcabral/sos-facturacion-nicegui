@@ -9,31 +9,35 @@ from __future__ import annotations
 
 from nicegui import app, ui
 
-PRIMARY = "#2563EB"
-ACCENT = "#14B8A6"
+PRIMARY = "#DC2626"
+ACCENT = "#E11D48"
 
 LIGHT_BG = "#F5F7FA"
 DARK_BG = "#121212"
 
 # Color base por categoria de servicio (design.md). La clave coincide con el
 # valor del enum ``CategoriaServicio`` para poder mapear ``categoria.value``.
+# Paleta roja monocromática (escala de Tailwind red) con tonos distinguibles:
+# los automotores (basico/completo/vip) van de red-600 a red-900 y las ramas
+# (87/89/90) de red-500 a red-300, para que se lean como una única familia.
 CATEGORIA_COLORS: dict[str, str] = {
-    "basico": "#3B82F6",
-    "completo": "#14B8A6",
-    "vip": "#A855F7",
-    "rama_87": "#64748B",
-    "rama_89": "#6B7280",
-    "rama_90": "#94A3B8",
+    "basico": "#DC2626",  # red-600
+    "completo": "#B91C1C",  # red-700
+    "vip": "#7F1D1D",  # red-900
+    "rama_87": "#EF4444",  # red-500
+    "rama_89": "#F87171",  # red-400
+    "rama_90": "#FCA5A5",  # red-300
 }
 
-# Variante oscura (sufijo "-1") para mantener contraste en modo oscuro.
+# Variante oscura (sufijo "-1") para mantener contraste en modo oscuro: un
+# paso más oscura que su par clara, conservando la misma escala roja.
 CATEGORIA_COLORS_DARK: dict[str, str] = {
-    "basico": "#1E40AF",
-    "completo": "#0F766E",
-    "vip": "#7E22CE",
-    "rama_87": "#475569",
-    "rama_89": "#4B5563",
-    "rama_90": "#64748B",
+    "basico": "#7F1D1D",  # red-900
+    "completo": "#991B1B",  # red-800
+    "vip": "#450A0A",  # red-950
+    "rama_87": "#DC2626",  # red-600
+    "rama_89": "#EF4444",  # red-500
+    "rama_90": "#F87171",  # red-400
 }
 
 
