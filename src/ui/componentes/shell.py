@@ -33,10 +33,12 @@ def _render_theme_toggle() -> None:
     """
     ensure_theme()
     ui.dark_mode(value=get_current_theme()).bind_value(app.storage.user, THEME_KEY)
+    # El header es blanco en tema claro y oscuro en tema oscuro: los íconos y el
+    # switch usan colores explícitos para seguir siendo visibles en ambos temas.
     with ui.row().classes("items-center gap-1"):
-        ui.icon("light_mode")
-        ui.switch().bind_value(app.storage.user, THEME_KEY).props("dense")
-        ui.icon("dark_mode")
+        ui.icon("light_mode").classes("text-amber-400")
+        ui.switch().bind_value(app.storage.user, THEME_KEY).props("dense color=amber")
+        ui.icon("dark_mode").classes("text-sky-300")
 
 
 def _render_header(user: dict) -> None:
