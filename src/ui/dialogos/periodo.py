@@ -12,6 +12,7 @@ from nicegui import ui
 from src.application.use_cases import cierre as cierre_uc
 from src.domain.exceptions import PeriodoAlreadyClosedError, PeriodoNotClosedError
 from src.infrastructure.adapters.uow import PostgresUoW
+from src.ui.formatos import format_ars
 
 PERIODO_FIELDS = [
     {"key": "nombre", "label": "Nombre", "type": "text"},
@@ -72,7 +73,9 @@ def _render_cuadro(cuadro: dict, titulo: str) -> None:
                 _stat(label, value)
         with ui.row().classes("w-full items-center justify-between mt-2 pt-2 border-t"):
             ui.label("Total a pagar").classes("text-subtitle2")
-            ui.label(cuadro["total_a_pagar"]).classes("text-h6 text-primary")
+            ui.label(format_ars(cuadro["total_a_pagar"])).classes(
+                "text-h6 text-primary"
+            )
 
 
 async def open_cierre_dialog(periodo: dict, *, regenerar: bool) -> None:
