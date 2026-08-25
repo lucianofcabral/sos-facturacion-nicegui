@@ -24,6 +24,9 @@ from src.ui.theme import CATEGORIA_COLORS
 
 _CATEGORIA_LABELS = dict(CATEGORIA_OPTS)
 
+# Orden estable: automotores (basico/completo/vip) arriba, ramas (87/89/90) abajo.
+_CATEGORIA_ORDEN = ("basico", "completo", "vip", "rama_87", "rama_89", "rama_90")
+
 
 async def _load() -> list[dict]:
     async with PostgresUoW() as uow:
@@ -44,8 +47,9 @@ async def _load() -> list[dict]:
                     "ultimo": m.ultimo_ciclo,
                 }
             )
-    # Agrupa visualmente las cards por categoría (mismo color) y luego por nombre.
-    out.sort(key=lambda d: (d["categoria"], d["nombre"]))
+    # Agrupa visualmente por categoría en el orden del grid (automotores primero,
+    # ramas después) y luego por nombre.
+    out.sort(key=lambda d: (_CATEGORIA_ORDEN.index(d["categoria"]), d["nombre"]))
     return out
 
 
@@ -128,7 +132,7 @@ def _render_card(container: ui.element, t: dict) -> None:
     categoria = t["categoria"]
     color = CATEGORIA_COLORS.get(categoria, "#64748B")
     etiqueta = _CATEGORIA_LABELS.get(categoria, categoria)
-    with ui.card().classes("gap-2"):
+    with ui.card().classes("w-72 gap-2"):
         ui.element("div").classes("w-full").style(
             f"height: 4px; background-color: {color}; border-radius: 9999px;"
         )
@@ -157,8 +161,6 @@ async def render(_user: dict) -> None:
         with ui.row().classes("w-full items-center justify-between"):
             ui.label("Tipos de servicio").classes("text-h5")
             ui.button("Nuevo tipo", on_click=_open_create)
-        container = ui.grid(columns="repeat(auto-fill, minmax(240px, 1fr))").classes(
-            "w-full gap-4"
-        )
+        container = ui.row().classes("w-full flex-wrap gap-4")
         for t in items:
             _render_card(container, t)
