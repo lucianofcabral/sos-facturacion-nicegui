@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from src.application.use_cases.cierre import total_de_snapshot
+from src.application.use_cases.cierre import cuadro_de_snapshot, total_de_snapshot
 from src.domain.dto import CreatePeriodo, EditPeriodo
 from src.domain.models.entities import Periodo, PeriodoConEstado
 from src.domain.ports.uow import UnitOfWorkPort
@@ -22,10 +22,11 @@ async def listar_periodos(uow: UnitOfWorkPort) -> list[Periodo]:
 
 
 async def listar_periodos_con_estado(uow: UnitOfWorkPort) -> list[PeriodoConEstado]:
-    """Return periods sorted desc by ``(anio, mes)`` with close state and total.
+    """Return periods sorted desc by ``(anio, mes)`` with close state, total and cuadro.
 
     ``cerrado`` is True when an official cierre exists; ``total`` is the
-    ``total_a_pagar`` of that cierre's snapshot (or None when absent).
+    ``total_a_pagar`` of that cierre's snapshot (or None when absent) and
+    ``cuadro`` is the full síntesis cuadro (or None when absent).
     """
     periodos = await uow.periodos.list()
     periodos.sort(key=lambda p: (p.anio, p.mes), reverse=True)
@@ -35,8 +36,10 @@ async def listar_periodos_con_estado(uow: UnitOfWorkPort) -> list[PeriodoConEsta
         assert p.id is not None
         oficial = await uow.cierres.get_oficial(p.id)
         total: Decimal | None = None
+        cuadro: dict | None = None
         if oficial is not None:
             total = total_de_snapshot(oficial.snapshot)
+            cuadro = cuadro_de_snapshot(oficial.snapshot)
         resultado.append(
             PeriodoConEstado(
                 id=p.id,
@@ -45,6 +48,7 @@ async def listar_periodos_con_estado(uow: UnitOfWorkPort) -> list[PeriodoConEsta
                 mes=p.mes,
                 cerrado=oficial is not None,
                 total=total,
+                cuadro=cuadro,
             )
         )
     return resultado

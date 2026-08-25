@@ -51,6 +51,7 @@ def test_listar_periodos_con_estado_cerrado_con_total():
             assert len(items) == 1
             assert items[0].cerrado is True
             assert items[0].total == Decimal("1234.56")
+            assert items[0].cuadro == {"total_a_pagar": "1234.56"}
 
     run_test(main)
 
@@ -86,5 +87,9 @@ def test_listar_periodos_con_estado_direct_cuadro_total():
             items = await periodo.listar_periodos_con_estado(uow)
             assert items[0].cerrado is True
             assert items[0].total == Decimal("999.00")
+            assert items[0].cuadro == {
+                "capitas": {"total": 17},
+                "total_a_pagar": "999.00",
+            }
 
     run_test(main)

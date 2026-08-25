@@ -1,9 +1,10 @@
 """Vista de periodos en cards paginadas.
 
 Los periodos se listan en orden descendente por (anio, mes) con su estado de
-cierre y total. El click en una card navega al detalle del periodo. El total
-oficial (``total_a_pagar`` del cierre) se muestra prominente solo en periodos
-cerrados.
+cierre. El click en una card navega al detalle del periodo. Las cards de
+periodos cerrados muestran el cuadro de síntesis oficial completo (cápitas por
+categoría y ramas, servicios, coeficientes, valores y total a pagar); los
+abiertos no muestran cuadro.
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ async def _load() -> list[dict]:
             "mes": i.mes,
             "cerrado": i.cerrado,
             "total": i.total,
+            "cuadro": i.cuadro,
         }
         for i in items
     ]
@@ -53,11 +55,53 @@ async def _crear_periodo() -> None:
     )
 
 
+def _stat(label: str, value: str) -> None:
+    """Par label/valor alineado a lo ancho (celda del grid de síntesis)."""
+    with ui.row().classes("w-full items-center justify-between"):
+        ui.label(label).classes("text-caption text-grey-7")
+        ui.label(value).classes("text-caption text-right")
+
+
+def _fmt_entero(v) -> str:
+    """Formatea un entero con separador de miles; ``—`` si no es numérico."""
+    try:
+        return f"{int(v):,}"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _render_sintesis(cuadro: dict) -> None:
+    """Renderiza el cuadro oficial completo dentro de una card de periodo."""
+    capitas = cuadro.get("capitas") or {}
+    servicios = cuadro.get("servicios") or {}
+    valores = cuadro.get("valores") or {}
+
+    ui.label("Total a pagar").classes("text-caption")
+    ui.label(cuadro.get("total_a_pagar", "—")).classes("text-h5 text-primary")
+
+    with ui.grid(columns="repeat(2, minmax(0, 1fr))").classes(
+        "w-full gap-x-4 gap-y-1 mt-1"
+    ):
+        _stat("Cápitas total", _fmt_entero(capitas.get("total")))
+        _stat("Servicios total", _fmt_entero(servicios.get("total")))
+        _stat("Cápitas básico", _fmt_entero(capitas.get("basico")))
+        _stat("Cápitas completo", _fmt_entero(capitas.get("completo")))
+        _stat("Cápitas VIP", _fmt_entero(capitas.get("vip")))
+        _stat("Cápitas rama 87", _fmt_entero(capitas.get("rama_87")))
+        _stat("Cápitas rama 89", _fmt_entero(capitas.get("rama_89")))
+        _stat("Cápitas rama 90", _fmt_entero(capitas.get("rama_90")))
+        _stat("Coef. uso", str(cuadro.get("coef_uso", "—")))
+        _stat("Coef. índice", str(cuadro.get("coef_indice", "—")))
+        _stat("Valor básico", str(valores.get("basico", "—")))
+        _stat("Valor completo", str(valores.get("completo", "—")))
+        _stat("Valor VIP", str(valores.get("vip", "—")))
+
+
 def _render_card(container: ui.element, p: dict) -> None:
     with (
         container,
         ui.card()
-        .classes("w-64 cursor-pointer hover:shadow-md")
+        .classes("w-80 cursor-pointer hover:shadow-md")
         .on("click", lambda pid=p["id"]: ui.navigate.to(f"/periodo/{pid}")),
     ):
         with ui.row().classes("w-full items-center justify-between"):
@@ -66,11 +110,18 @@ def _render_card(container: ui.element, p: dict) -> None:
                 ui.badge("Oficial", color="green")
             else:
                 ui.badge("Abierto", color="grey")
-        ui.label(f"{p['anio']} / {p['mes']}").classes("text-caption")
-        if p["cerrado"] and p["total"] is not None:
-            with ui.column().classes("mt-2 items-start"):
-                ui.label("Total oficial").classes("text-caption")
-                ui.label(f"{p['total']:,.2f}").classes("text-h5 text-primary")
+        ui.label(f"{p['anio']} / {p['mes']}").classes("text-caption text-grey-7")
+        if p["cerrado"]:
+            cuadro = p.get("cuadro")
+            if cuadro:
+                ui.separator()
+                _render_sintesis(cuadro)
+            elif p["total"] is not None:
+                with ui.column().classes("mt-2 items-start"):
+                    ui.label("Total oficial").classes("text-caption")
+                    ui.label(f"{p['total']:,.2f}").classes("text-h5 text-primary")
+        else:
+            ui.label("Sin cierre oficial").classes("text-caption text-grey-7 mt-1")
 
 
 async def render(_user: dict) -> None:

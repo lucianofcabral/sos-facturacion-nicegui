@@ -17,7 +17,7 @@ class Periodo(BaseModel):
 
 
 class PeriodoConEstado(BaseModel):
-    """Read model: periodo + estado de cierre + total (not persisted)."""
+    """Read model: periodo + estado de cierre + total + cuadro (not persisted)."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -27,6 +27,7 @@ class PeriodoConEstado(BaseModel):
     mes: int
     cerrado: bool
     total: Decimal | None = None
+    cuadro: dict | None = None
 
 
 class TipoServicio(BaseModel):

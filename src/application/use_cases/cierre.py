@@ -222,6 +222,23 @@ def _construir_snapshot(cuadro: SintesisPeriodo) -> dict:
     }
 
 
+def cuadro_de_snapshot(snapshot: dict | None) -> dict | None:
+    """Return the full síntesis cuadro from either snapshot format.
+
+    Legacy snapshots wrapped the cuadro under ``"sintesis"``; new snapshots store
+    the cuadro directly (a ``capitas`` key marks the direct form). Returns ``None``
+    when the snapshot is absent or carries no recognizable cuadro.
+    """
+    if not snapshot:
+        return None
+    sintesis = snapshot.get("sintesis")
+    if isinstance(sintesis, dict):
+        return sintesis
+    if isinstance(snapshot.get("capitas"), dict):
+        return snapshot
+    return None
+
+
 def total_de_snapshot(snapshot: dict | None) -> Decimal | None:
     """Return the official ``total_a_pagar`` from either snapshot format.
 
@@ -229,10 +246,9 @@ def total_de_snapshot(snapshot: dict | None) -> Decimal | None:
     the cuadro directly. Both carry ``total_a_pagar`` as a 2dp string. Returns
     ``None`` when the snapshot is absent or lacks the total.
     """
-    if not snapshot:
+    cuadro = cuadro_de_snapshot(snapshot)
+    if cuadro is None:
         return None
-    sintesis = snapshot.get("sintesis")
-    cuadro = sintesis if isinstance(sintesis, dict) else snapshot
     raw = cuadro.get("total_a_pagar")
     if raw is None:
         return None
@@ -466,10 +482,9 @@ async def _cuadro_de_cierre(uow: UnitOfWorkPort, c: Cierre) -> dict:
     """
     snapshot = c.snapshot
     if snapshot is not None:
-        if isinstance(snapshot.get("sintesis"), dict):
-            return snapshot["sintesis"]
-        if isinstance(snapshot.get("capitas"), dict):
-            return snapshot
+        cuadro = cuadro_de_snapshot(snapshot)
+        if cuadro is not None:
+            return cuadro
     periodo = await uow.periodos.get(c.periodo_id)
     return await _armar_snapshot(uow, periodo, c.aumento)
 
