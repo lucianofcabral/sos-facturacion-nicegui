@@ -222,6 +222,23 @@ def _construir_snapshot(cuadro: SintesisPeriodo) -> dict:
     }
 
 
+def total_de_snapshot(snapshot: dict | None) -> Decimal | None:
+    """Return the official ``total_a_pagar`` from either snapshot format.
+
+    Legacy snapshots wrapped the cuadro under ``"sintesis"``; new snapshots store
+    the cuadro directly. Both carry ``total_a_pagar`` as a 2dp string. Returns
+    ``None`` when the snapshot is absent or lacks the total.
+    """
+    if not snapshot:
+        return None
+    sintesis = snapshot.get("sintesis")
+    cuadro = sintesis if isinstance(sintesis, dict) else snapshot
+    raw = cuadro.get("total_a_pagar")
+    if raw is None:
+        return None
+    return Decimal(str(raw))
+
+
 async def cerrar_periodo(
     uow: UnitOfWorkPort,
     periodo_id: int,

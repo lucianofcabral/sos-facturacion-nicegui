@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from src.application.use_cases.cierre import total_de_snapshot
 from src.domain.dto import CreatePeriodo, EditPeriodo
 from src.domain.models.entities import Periodo, PeriodoConEstado
 from src.domain.ports.uow import UnitOfWorkPort
@@ -34,12 +35,8 @@ async def listar_periodos_con_estado(uow: UnitOfWorkPort) -> list[PeriodoConEsta
         assert p.id is not None
         oficial = await uow.cierres.get_oficial(p.id)
         total: Decimal | None = None
-        if oficial is not None and oficial.snapshot:
-            sintesis = oficial.snapshot.get("sintesis")
-            if sintesis:
-                raw = sintesis.get("total_a_pagar")
-                if raw is not None:
-                    total = Decimal(str(raw))
+        if oficial is not None:
+            total = total_de_snapshot(oficial.snapshot)
         resultado.append(
             PeriodoConEstado(
                 id=p.id,

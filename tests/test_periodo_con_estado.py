@@ -65,3 +65,26 @@ def test_listar_periodos_con_estado_abierto_sin_total():
             assert items[0].total is None
 
     run_test(main)
+
+
+def test_listar_periodos_con_estado_direct_cuadro_total():
+    async def main():
+        async with PostgresUoW() as uow:
+            p = await periodo.crear_periodo(uow, CreatePeriodo(nombre="Ene", anio=2025, mes=1))
+            # nuevo formato: el cuadro vive directo, sin wrapper "sintesis"
+            await uow.cierres.add(
+                Cierre(
+                    periodo_id=p.id,
+                    version=1,
+                    estado=EstadoCierre.OFICIAL,
+                    origen=OrigenCierre.MANUAL,
+                    aumento=Decimal("0"),
+                    snapshot={"capitas": {"total": 17}, "total_a_pagar": "999.00"},
+                )
+            )
+            await uow.commit()
+            items = await periodo.listar_periodos_con_estado(uow)
+            assert items[0].cerrado is True
+            assert items[0].total == Decimal("999.00")
+
+    run_test(main)
