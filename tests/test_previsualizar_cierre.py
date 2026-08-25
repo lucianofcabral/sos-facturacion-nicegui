@@ -172,7 +172,7 @@ def test_previsualizar_aumento_parity():
             await _crear_capita(uow, target.id, ts_com.id, 5)
             await _crear_capita(uow, target.id, ts_vip.id, 2)
             preview = await cierre.previsualizar_cierre(uow, target.id, Decimal("10"))
-            # alícuotas = valor × (1 + aumento/100) del set anterior
+            # alícuotas = valor * (1 + aumento/100) del set anterior
             assert preview["valores"] == {
                 "basico": "110.00",
                 "completo": "220.00",
