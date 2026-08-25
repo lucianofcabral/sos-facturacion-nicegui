@@ -275,6 +275,38 @@ async def generar_nuevo_cierre(
     return creado
 
 
+async def previsualizar_cierre(
+    uow: UnitOfWorkPort,
+    periodo_id: int,
+    aumento: Decimal | float,
+    servicio_conteos: dict[int, int] | None = None,
+) -> dict:
+    """Return the hypothetical síntesis cuadro WITHOUT persisting or committing.
+
+    Read-only mirror of the closure paths. For a non-zero ``aumento`` it
+    recomputes the previous effective alicuotas in memory (``recalcular_aumento``)
+    and feeds them as an override, so the returned cuadro equals exactly what
+    ``cerrar_periodo`` / ``generar_nuevo_cierre`` would snapshot for identical
+    inputs. It never writes and never calls ``uow.commit()`` (the UoW ``__exit__``
+    rollback is a no-op).
+    """
+    target = await uow.periodos.get(periodo_id)
+    aumento_dec = Decimal(str(aumento))
+    alicuotas_override: list[Alicuota] | None = None
+    if aumento_dec != 0:
+        prev = await uow.periodos.get_previous(target.anio, target.mes)
+        if prev is not None:
+            prev_efectivas = await uow.alicuotas.get_effective(prev.anio, prev.mes)
+            alicuotas_override = recalcular_aumento(prev_efectivas, aumento_dec)
+    return await _armar_snapshot(
+        uow,
+        target,
+        aumento_dec,
+        servicio_conteos=servicio_conteos,
+        alicuotas=alicuotas_override,
+    )
+
+
 async def _cerrar_y_cascada(
     uow: UnitOfWorkPort,
     target: Periodo,
@@ -381,17 +413,22 @@ async def _armar_snapshot(
     periodo: Periodo,
     aumento: Decimal,
     servicio_conteos: dict[int, int] | None = None,
+    alicuotas: list[Alicuota] | None = None,
 ) -> dict:
     """Build the síntesis cuadro snapshot for ``periodo`` from live tables.
 
     Refetches capitas, servicios, alicuotas and tipos inside the transaction so
-    it sees the just-replaced alicuota set. Used by both closure paths. When
-    ``servicio_conteos`` is injected it becomes the service-count source (so
-    historical snapshots carry real counts even with an empty ``servicio`` table);
-    otherwise counts derive from the ``servicio`` table as before.
+    it sees the just-replaced alicuota set. Used by both closure paths and by
+    ``previsualizar_cierre``. When ``servicio_conteos`` is injected it becomes the
+    service-count source (so historical snapshots carry real counts even with an
+    empty ``servicio`` table); otherwise counts derive from the ``servicio`` table
+    as before. ``alicuotas`` is an in-memory override (e.g. a recalculated set)
+    that replaces the live ``get_effective`` read — used by the read-only preview
+    so it can reflect a hypothetical aumento without persisting it.
     """
     capitas = await uow.capitas_periodo.get_by_fields(periodo_id=periodo.id)
-    alicuotas = await uow.alicuotas.get_effective(periodo.anio, periodo.mes)
+    if alicuotas is None:
+        alicuotas = await uow.alicuotas.get_effective(periodo.anio, periodo.mes)
     servicios = await uow.servicios.get_by_fields(periodo_id=periodo.id)
     tipos_list = await uow.tipos_servicio.list()
     tipos = {t.id: t for t in tipos_list if t.id is not None}
