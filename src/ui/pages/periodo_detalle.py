@@ -30,6 +30,7 @@ from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.dialogos import open_form_dialog
 from src.ui.dialogos.pendientes import resolver_pendientes
 from src.ui.dialogos.periodo import PERIODO_FIELDS, open_cierre_dialog
+from src.ui.formatos import format_ars
 from src.ui.session import (
     get_current_rol,
     get_current_user,
@@ -227,62 +228,71 @@ async def detalle(periodo_id: int) -> None:
                             ui.label("Total oficial").classes(
                                 "text-caption text-grey-7"
                             )
-                            ui.label(f"{periodo['total']:,.2f}").classes(
+                            ui.label(format_ars(periodo["total"])).classes(
                                 "text-h5 text-primary"
                             )
                     ui.button("Editar datos", on_click=lambda: _editar_datos(periodo))
 
-        # --- Cápitas ----------------------------------------------------------
-        with ui.card().classes("w-full gap-3"):
-            widgets: dict[int, object] = {}
-            with ui.row().classes("w-full items-center justify-between"):
-                ui.label("Cápitas").classes("text-h6")
-                ui.button(
-                    "Guardar cápitas",
-                    on_click=lambda: _guardar_capitas(periodo_id, widgets),
-                )
-
-            capitas = await _load_capitas(periodo_id)
-            # Automotores primero, ramas después; dentro de cada grupo por nombre.
-            capitas.sort(
-                key=lambda c: (
-                    _CATEGORIA_ORDEN.index(c["categoria"])
-                    if c["categoria"] in _CATEGORIA_ORDEN
-                    else len(_CATEGORIA_ORDEN),
-                    c["tipo_nombre"].lower(),
-                )
+        # --- Cápitas + Import (lado a lado) -----------------------------------
+        widgets: dict[int, object] = {}
+        capitas = await _load_capitas(periodo_id)
+        # Automotores primero, ramas después; dentro de cada grupo por nombre.
+        capitas.sort(
+            key=lambda c: (
+                _CATEGORIA_ORDEN.index(c["categoria"])
+                if c["categoria"] in _CATEGORIA_ORDEN
+                else len(_CATEGORIA_ORDEN),
+                c["tipo_nombre"].lower(),
             )
+        )
 
-            # Leyenda de color por categoría (solo las presentes).
-            categorias_presentes = {c["categoria"] for c in capitas}
-            with ui.row().classes("items-center gap-3 flex-wrap"):
-                for categoria in _CATEGORIA_ORDEN:
-                    if categoria not in categorias_presentes:
-                        continue
-                    color = CATEGORIA_COLORS.get(categoria, "#64748B")
-                    with ui.row().classes("items-center gap-1"):
-                        ui.icon("circle", size="xs").style(f"color: {color}")
-                        ui.label(_CATEGORIA_LABELS.get(categoria, categoria)).classes(
-                            "text-caption text-grey-7"
-                        )
+        with ui.row().classes("w-full items-start gap-4"):
+            with ui.card().classes("flex-1 gap-3"):
+                with ui.row().classes("w-full items-center justify-between"):
+                    ui.label("Cápitas").classes("text-h6")
+                    ui.button(
+                        "Guardar cápitas",
+                        on_click=lambda: _guardar_capitas(periodo_id, widgets),
+                    )
 
-            # Un único grid compacto: una tile por tipo con franja de color por
-            # categoría, en lugar de secciones apiladas que desperdician espacio.
-            with ui.grid(columns="repeat(auto-fill, minmax(180px, 1fr))").classes(
-                "w-full gap-3"
-            ):
-                for c in capitas:
-                    color = CATEGORIA_COLORS.get(c["categoria"], "#64748B")
-                    with ui.card().classes("gap-1"):
-                        ui.element("div").classes("w-full").style(
-                            f"height: 3px; background-color: {color};"
-                            " border-radius: 9999px;"
-                        )
-                        ui.label(c["tipo_nombre"]).classes("text-caption text-grey-7")
-                        widgets[c["tipo_servicio_id"]] = ui.number(
-                            value=c["capitas"] if c["capitas"] is not None else 0,
-                            min=0,
-                        ).classes("w-full")
+                # Leyenda de color por categoría (solo las presentes).
+                categorias_presentes = {c["categoria"] for c in capitas}
+                with ui.row().classes("items-center gap-3 flex-wrap"):
+                    for categoria in _CATEGORIA_ORDEN:
+                        if categoria not in categorias_presentes:
+                            continue
+                        color = CATEGORIA_COLORS.get(categoria, "#64748B")
+                        with ui.row().classes("items-center gap-1"):
+                            ui.icon("circle", size="xs").style(f"color: {color}")
+                            ui.label(
+                                _CATEGORIA_LABELS.get(categoria, categoria)
+                            ).classes("text-caption text-grey-7")
+
+                # Un único grid compacto: una tile por tipo con franja de color por
+                # categoría, en lugar de secciones apiladas que desperdician espacio.
+                with ui.grid(columns="repeat(auto-fill, minmax(180px, 1fr))").classes(
+                    "w-full gap-3"
+                ):
+                    for c in capitas:
+                        color = CATEGORIA_COLORS.get(c["categoria"], "#64748B")
+                        with ui.card().classes("gap-1"):
+                            ui.element("div").classes("w-full").style(
+                                f"height: 3px; background-color: {color};"
+                                " border-radius: 9999px;"
+                            )
+                            ui.label(c["tipo_nombre"]).classes(
+                                "text-caption text-grey-7"
+                            )
+                            widgets[c["tipo_servicio_id"]] = ui.number(
+                                value=c["capitas"] if c["capitas"] is not None else 0,
+                                min=0,
+                            ).classes("w-full")
+
+            # Import de servicios: al lado del bloque de cápitas (solo admin).
+            if es_admin:
+                with ui.card().classes("w-80 gap-2"):
+                    ui.label("Importar servicios").classes("text-h6")
+                    await _importar(periodo_id)
 
         # --- Cierre -----------------------------------------------------------
         with ui.card().classes("w-full gap-2"):
@@ -302,19 +312,22 @@ async def detalle(periodo_id: int) -> None:
         if es_admin:
             with ui.card().classes("w-full gap-3"):
                 ui.label("Servicios").classes("text-h6")
-                await _importar(periodo_id)
 
                 all_rows = await _load_servicios(periodo_id)
-
-                texto = ui.input(placeholder="Buscar por texto…").classes("w-64")
-                desde = ui.input(label="Desde").props('type="date"').classes("w-44")
-                hasta = ui.input(label="Hasta").props('type="date"').classes("w-44")
 
                 table = ui.table(
                     rows=all_rows,
                     columns=_SERVICIO_COLUMNS,
                     pagination={"rowsPerPage": 15},
                 ).classes("w-full")
+
+                # Todos los filtros + acciones en una única fila horizontal.
+                with ui.row().classes("w-full items-center gap-2 flex-wrap"):
+                    texto = ui.input(placeholder="Buscar por texto…").classes("w-56")
+                    desde = ui.input(label="Desde").props('type="date"').classes("w-40")
+                    hasta = ui.input(label="Hasta").props('type="date"').classes("w-40")
+                    filtrar_btn = ui.button("Filtrar")
+                    limpiar_btn = ui.button("Limpiar filtros").props("flat")
 
                 def _aplica_filtros() -> None:
                     t = (texto.value or "").strip().lower()
@@ -338,8 +351,5 @@ async def detalle(periodo_id: int) -> None:
                     hasta.value = None
                     _aplica_filtros()
 
-                with ui.row().classes("items-center gap-2"):
-                    ui.button("Filtrar", on_click=_aplica_filtros)
-                    ui.button("Limpiar filtros", on_click=_limpiar_filtros).props(
-                        "flat"
-                    )
+                filtrar_btn.on_click(_aplica_filtros)
+                limpiar_btn.on_click(_limpiar_filtros)
