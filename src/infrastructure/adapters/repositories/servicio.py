@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from psycopg.rows import dict_row
 
-from src.domain.models.entities import Servicio
+from src.domain.enums import CategoriaServicio
+from src.domain.models.entities import (
+    ConteoCategoriaPeriodo,
+    ConteoProductor,
+    Servicio,
+)
 from src.domain.ports.repositories import ServicioRepository
 from src.infrastructure.adapters.repositories._base import PostgresRepository
 
@@ -87,3 +92,41 @@ class ServicioRepositoryPg(PostgresRepository, ServicioRepository):
                     "VALUES (%s, %s, %s, %s, %s, %s, %s)",
                     rows,
                 )
+
+    async def conteo_por_categoria_periodo(self) -> list[ConteoCategoriaPeriodo]:
+        sql = (
+            "SELECT p.anio, p.mes, ts.categoria, COUNT(*)::int AS total "
+            "FROM servicio s "
+            "JOIN periodo p ON p.id = s.periodo_id "
+            "JOIN tipo_servicio ts ON ts.id = s.tipo_servicio_id "
+            "GROUP BY p.anio, p.mes, ts.categoria "
+            "ORDER BY p.anio DESC, p.mes DESC, ts.categoria"
+        )
+        async with self._conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(sql)
+            rows = await cur.fetchall()
+        return [
+            ConteoCategoriaPeriodo(
+                anio=r["anio"],
+                mes=r["mes"],
+                categoria=CategoriaServicio(r["categoria"]),
+                total=r["total"],
+            )
+            for r in rows
+        ]
+
+    async def top_productores(self, limite: int = 10) -> list[ConteoProductor]:
+        sql = (
+            "SELECT cod_productor, COUNT(*)::int AS total "
+            "FROM servicio "
+            "GROUP BY cod_productor "
+            "ORDER BY COUNT(*) DESC, cod_productor "
+            "LIMIT %s"
+        )
+        async with self._conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(sql, (limite,))
+            rows = await cur.fetchall()
+        return [
+            ConteoProductor(cod_productor=r["cod_productor"], total=r["total"])
+            for r in rows
+        ]

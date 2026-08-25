@@ -17,6 +17,8 @@ from src.domain.models.entities import (
     Alicuota,
     CapitaPeriodo,
     Cierre,
+    ConteoCategoriaPeriodo,
+    ConteoProductor,
     MetricasTipoServicio,
     Periodo,
     Servicio,
@@ -73,8 +75,12 @@ class TipoServicioRepository(Repository[TipoServicio], Protocol):
 
 
 class AlicuotaRepository(Repository[Alicuota], Protocol):
-    def get(self, periodo_id: int, tipo_servicio_id: int, coeficiente: float) -> Alicuota | None: ...
-    def remove(self, periodo_id: int, tipo_servicio_id: int, coeficiente: float) -> None: ...
+    def get(
+        self, periodo_id: int, tipo_servicio_id: int, coeficiente: float
+    ) -> Alicuota | None: ...
+    def remove(
+        self, periodo_id: int, tipo_servicio_id: int, coeficiente: float
+    ) -> None: ...
     def get_by_keys(
         self,
         periodo_id: int | None = None,
@@ -107,6 +113,14 @@ class ServicioRepository(Repository[Servicio], Protocol):
         self, periodo_id: int, servicios: list[Servicio]
     ) -> None: ...
 
+    def conteo_por_categoria_periodo(self) -> list[ConteoCategoriaPeriodo]:
+        """Servicios agrupados por (anio, mes, categoria) en TODOS los periodos."""
+        ...
+
+    def top_productores(self, limite: int = 10) -> list[ConteoProductor]:
+        """Productores ordenados por cantidad de servicios (DESC), top ``limite``."""
+        ...
+
 
 class CapitaPeriodoRepository(Repository[CapitaPeriodo], Protocol):
     def get(self, periodo_id: int, tipo_servicio_id: int) -> CapitaPeriodo | None: ...
@@ -125,9 +139,7 @@ class CierreRepository(Repository[Cierre], Protocol):
     def get_oficial(self, periodo_id: int) -> Cierre | None: ...
     def demote_oficial(self, periodo_id: int) -> None: ...
 
-    def get_oficiales_recientes(
-        self, periodo_id: int, limit: int = 12
-    ) -> list[Cierre]:
+    def get_oficiales_recientes(self, periodo_id: int, limit: int = 12) -> list[Cierre]:
         """Official cierres of periods strictly before ``periodo_id``, desc."""
         ...
 

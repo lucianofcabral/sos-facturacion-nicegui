@@ -51,6 +51,43 @@ class MetricasTipoServicio(BaseModel):
     ultimo_ciclo: str | None = None
 
 
+class ConteoCategoriaPeriodo(BaseModel):
+    """Read model: cantidad de servicios por (anio, mes, categoria)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    anio: int
+    mes: int
+    categoria: CategoriaServicio
+    total: int
+
+
+class ConteoProductor(BaseModel):
+    """Read model: cantidad de servicios por productor (cod_productor)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    cod_productor: int
+    total: int
+
+
+class ResumenReportes(BaseModel):
+    """Read model agregado para la pestaña de Reportes (no persistido).
+
+    ``conteos_categoria`` y ``top_productores`` vienen de dos queries del
+    repositorio; los KPIs escalares se derivan en Python en el use case.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    conteos_categoria: list[ConteoCategoriaPeriodo]
+    top_productores: list[ConteoProductor]
+    total_servicios: int
+    periodos_con_servicios: int
+    productores_distintos: int
+    tipos_distintos: int
+
+
 class Alicuota(BaseModel):
     model_config = ConfigDict(frozen=True)
 

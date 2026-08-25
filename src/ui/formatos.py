@@ -22,3 +22,16 @@ def format_ars(value) -> str:
     # Convierte ``1,234,567.89`` en ``1.234.567,89`` intercambiando separadores.
     texto = texto.replace(",", "\u0000").replace(".", ",").replace("\u0000", ".")
     return f"$ {texto}"
+
+
+def format_int(value) -> str:
+    """Formatea un entero con separador de miles (coma); ``—`` si no es numérico.
+
+    Espejo de ``_fmt_entero`` de la vista de periodos, promovido a helper
+    reutilizable. Miles con coma para mantenerse consistente con el resto de la
+    UI (moneda aparte usa formato es-AR con punto).
+    """
+    try:
+        return f"{int(value):,}"
+    except (TypeError, ValueError):
+        return "—"

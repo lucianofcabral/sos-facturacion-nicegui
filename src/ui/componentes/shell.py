@@ -60,6 +60,7 @@ def render(user: dict) -> Tabs:
     ):
         ui.tab("periodos", "Periodos", icon="calendar_month")
         ui.tab("ts", "Tipos de servicio", icon="sell")
+        ui.tab("reportes", "Reportes", icon="insights")
         if is_admin(user):
             ui.tab("usuario", "Usuarios", icon="person")
     return tabs

@@ -17,6 +17,7 @@ from src.ui.pages import alicuota as alicuota_page  # noqa: F401
 from src.ui.pages import capita_periodo as cp_page  # noqa: F401
 from src.ui.pages import periodo_detalle  # noqa: F401  (registra /periodo/{id})
 from src.ui.pages import periodos as periodos_page
+from src.ui.pages import reportes as reportes_page
 from src.ui.pages import servicio as servicio_page  # noqa: F401
 from src.ui.pages import tipo_servicio as ts_page
 from src.ui.pages import usuario as usuario_page
@@ -67,6 +68,8 @@ async def _render_app(user: dict) -> None:
             await periodos_page.render(user)
         with ui.tab_panel("ts"):
             await ts_page.render(user)
+        with ui.tab_panel("reportes"):
+            await reportes_page.render(user)
         if is_admin(user):
             with ui.tab_panel("usuario"):
                 await usuario_page.render(user)
