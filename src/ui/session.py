@@ -10,6 +10,8 @@ from src.domain.enums import RolUsuario
 
 _KEY = "sos_user"
 
+THEME_KEY = "sos_theme"
+
 
 def set_current_user(id: UUID, nombre: str, rol: RolUsuario) -> None:
     # 'user' (no 'client') persiste entre reloads; requiere storage_secret en ui.run().
@@ -49,3 +51,23 @@ def get_current_rol() -> RolUsuario:
     if user is None:
         return RolUsuario.USUARIO
     return RolUsuario(user["rol"])
+
+
+def get_current_theme() -> bool:
+    """Return the persisted dark-mode preference, defaulting to ``True`` (dark)."""
+    return bool(app.storage.user.get(THEME_KEY, True))
+
+
+def set_current_theme(dark: bool) -> None:
+    """Persist the dark-mode preference for the current user."""
+    app.storage.user[THEME_KEY] = dark
+
+
+def ensure_theme() -> None:
+    """Persist the default dark theme when no preference is stored yet.
+
+    ``main.py`` keeps ``dark=True`` as the initial default; without a stored
+    value the dark-mode toggle would bind to ``None`` (auto) and ignore it.
+    """
+    if THEME_KEY not in app.storage.user:
+        set_current_theme(True)

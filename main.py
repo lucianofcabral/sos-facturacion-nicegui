@@ -9,9 +9,11 @@ from nicegui import app, ui
 
 import src.ui.pages.home  # noqa: F401  (side-effect: registra la página '/')
 from src.bootstrap import bootstrap
+from src.ui.theme import apply_theme
 
 load_dotenv()
 
+apply_theme()
 app.on_startup(bootstrap)
 
 if __name__ in {"__main__", "__mp_main__"}:
