@@ -42,21 +42,35 @@ CATEGORIA_COLORS_DARK: dict[str, str] = {
 
 
 def _base_css() -> str:
-    """CSS vars para fondo claro/oscuro y pulido de cards (radio + sombra)."""
+    """CSS vars para fondo claro/oscuro y pulido de cards (radio + sombra).
+
+    NiceGUI renderiza ``ui.card()`` como el tag ``q-card`` con clase
+    ``nicegui-card`` (no con clase ``q-card``): el selector tiene que ser el tag
+    ``q-card`` para que el borde/radio/sombra se apliquen. NiceGUI además anula
+    por defecto ``box-shadow`` y ``border-radius`` del card, así que acá los
+    restauramos junto con un fondo y un borde visibles para que el encabezado y
+    las cards no se confundan con el fondo de la página.
+    """
     return (
         "<style>\n"
         ":root {\n"
         f"  --sos-bg: {LIGHT_BG};\n"
-        "  --sos-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08),"
-        " 0 1px 2px rgba(0, 0, 0, 0.04);\n"
+        "  --sos-card-bg: #FFFFFF;\n"
+        "  --sos-card-border: rgba(0, 0, 0, 0.08);\n"
+        "  --sos-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.10),"
+        " 0 1px 2px rgba(0, 0, 0, 0.06);\n"
         "}\n"
         ".body--dark {\n"
         f"  --sos-bg: {DARK_BG};\n"
+        "  --sos-card-bg: #1E1E1E;\n"
+        "  --sos-card-border: rgba(255, 255, 255, 0.12);\n"
         "  --sos-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.45),"
         " 0 1px 2px rgba(0, 0, 0, 0.35);\n"
         "}\n"
         "body { background-color: var(--sos-bg); }\n"
-        ".q-card {\n"
+        "q-card {\n"
+        "  background: var(--sos-card-bg);\n"
+        "  border: 1px solid var(--sos-card-border);\n"
         "  border-radius: 0.75rem;\n"
         "  box-shadow: var(--sos-card-shadow);\n"
         "}\n"
