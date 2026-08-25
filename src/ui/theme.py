@@ -85,7 +85,7 @@ def _category_css() -> str:
         rules.append(f".bg-{categoria} {{ background-color: {color}; }}")
         dark = CATEGORIA_COLORS_DARK[categoria]
         rules.append(f".bg-{categoria}-1 {{ background-color: {dark}; }}")
-    return "\n".join(rules) + "\n"
+    return "<style>\n" + "\n".join(rules) + "\n</style>\n"
 
 
 def apply_theme() -> None:
