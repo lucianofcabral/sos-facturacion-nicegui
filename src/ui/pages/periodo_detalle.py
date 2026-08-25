@@ -234,46 +234,55 @@ async def detalle(periodo_id: int) -> None:
 
         # --- Cápitas ----------------------------------------------------------
         with ui.card().classes("w-full gap-3"):
-            ui.label("Cápitas").classes("text-h6")
-            capitas = await _load_capitas(periodo_id)
             widgets: dict[int, object] = {}
+            with ui.row().classes("w-full items-center justify-between"):
+                ui.label("Cápitas").classes("text-h6")
+                ui.button(
+                    "Guardar cápitas",
+                    on_click=lambda: _guardar_capitas(periodo_id, widgets),
+                )
 
-            grupos: dict[str, list[dict]] = {}
-            for c in capitas:
-                grupos.setdefault(c["categoria"], []).append(c)
+            capitas = await _load_capitas(periodo_id)
+            # Automotores primero, ramas después; dentro de cada grupo por nombre.
+            capitas.sort(
+                key=lambda c: (
+                    _CATEGORIA_ORDEN.index(c["categoria"])
+                    if c["categoria"] in _CATEGORIA_ORDEN
+                    else len(_CATEGORIA_ORDEN),
+                    c["tipo_nombre"].lower(),
+                )
+            )
 
-            for categoria in _CATEGORIA_ORDEN:
-                if categoria not in grupos:
-                    continue
-                color = CATEGORIA_COLORS.get(categoria, "#64748B")
-                with ui.column().classes("w-full gap-2"):
-                    with ui.row().classes("items-center gap-2"):
+            # Leyenda de color por categoría (solo las presentes).
+            categorias_presentes = {c["categoria"] for c in capitas}
+            with ui.row().classes("items-center gap-3 flex-wrap"):
+                for categoria in _CATEGORIA_ORDEN:
+                    if categoria not in categorias_presentes:
+                        continue
+                    color = CATEGORIA_COLORS.get(categoria, "#64748B")
+                    with ui.row().classes("items-center gap-1"):
                         ui.icon("circle", size="xs").style(f"color: {color}")
                         ui.label(_CATEGORIA_LABELS.get(categoria, categoria)).classes(
-                            "text-subtitle2"
+                            "text-caption text-grey-7"
                         )
-                    with ui.grid(
-                        columns="repeat(auto-fill, minmax(220px, 1fr))"
-                    ).classes("w-full gap-3"):
-                        for c in grupos[categoria]:
-                            with (
-                                ui.card()
-                                .classes("gap-1")
-                                .style("padding: 0.75rem 1rem")
-                            ):
-                                ui.label(c["tipo_nombre"]).classes(
-                                    "text-caption text-grey-7"
-                                )
-                                widgets[c["tipo_servicio_id"]] = ui.number(
-                                    value=c["capitas"]
-                                    if c["capitas"] is not None
-                                    else 0,
-                                    min=0,
-                                ).classes("w-full")
-            ui.button(
-                "Guardar cápitas",
-                on_click=lambda: _guardar_capitas(periodo_id, widgets),
-            )
+
+            # Un único grid compacto: una tile por tipo con franja de color por
+            # categoría, en lugar de secciones apiladas que desperdician espacio.
+            with ui.grid(columns="repeat(auto-fill, minmax(180px, 1fr))").classes(
+                "w-full gap-3"
+            ):
+                for c in capitas:
+                    color = CATEGORIA_COLORS.get(c["categoria"], "#64748B")
+                    with ui.card().classes("gap-1"):
+                        ui.element("div").classes("w-full").style(
+                            f"height: 3px; background-color: {color};"
+                            " border-radius: 9999px;"
+                        )
+                        ui.label(c["tipo_nombre"]).classes("text-caption text-grey-7")
+                        widgets[c["tipo_servicio_id"]] = ui.number(
+                            value=c["capitas"] if c["capitas"] is not None else 0,
+                            min=0,
+                        ).classes("w-full")
 
         # --- Cierre -----------------------------------------------------------
         with ui.card().classes("w-full gap-2"):
