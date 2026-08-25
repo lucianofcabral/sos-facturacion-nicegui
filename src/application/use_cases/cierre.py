@@ -23,7 +23,6 @@ from src.domain.models.entities import (
     CapitaPeriodo,
     Cierre,
     Periodo,
-    Servicio,
     SintesisPeriodo,
     TipoServicio,
 )
@@ -63,15 +62,6 @@ def _mismo_conjunto(a: list[Alicuota], b: list[Alicuota]) -> bool:
         return {(x.tipo_servicio_id, x.coeficiente, Decimal(str(x.valor))) for x in items}
 
     return _firma(a) == _firma(b)
-
-
-_SHEET_KEYS = (
-    "servicios_total",
-    "servicios_basico",
-    "servicios_completo",
-    "servicios_vip",
-)
-_AUTOMOTORES_BUCKETS = ("basico", "completo", "vip")
 
 
 def _clasificar_tipo(tipo: TipoServicio) -> str:
@@ -194,39 +184,16 @@ def computar_sintesis(
     )
 
 
-def _construir_snapshot(
-    servicios: list[Servicio],
-    tipos: dict[int, TipoServicio],
-    cuadro: SintesisPeriodo,
-) -> dict:
-    """Build the JSON-native 5-sheet snapshot (4 service sheets + síntesis).
+def _construir_snapshot(cuadro: SintesisPeriodo) -> dict:
+    """Serialize the síntesis cuadro as the JSON-native cierre snapshot.
 
-    Service rows carry the full record (``fecha`` as ISO date, ``tipo`` as the
-    raw tipo name) and the cuadro is serialized with Decimals as fixed 2dp
-    strings, so ``json.dumps`` never sees a Decimal or date.
+    The snapshot now carries ONLY the computed cuadro (capitas, service counts,
+    coefficients, values and total). The raw input sheets live in
+    ``periodo.hojas_entrada``, so the cierre no longer duplicates service rows.
+    Decimals are serialized as fixed 2dp strings so ``json.dumps`` never sees a
+    Decimal or date.
     """
-    hojas: dict[str, list[dict]] = {k: [] for k in _SHEET_KEYS}
-
-    def _fila(s: Servicio, tipo_nombre: str | None) -> dict:
-        return {
-            "nro_servicio": s.nro_servicio,
-            "codigo_radio": s.codigo_radio,
-            "fecha": s.fecha.isoformat(),
-            "dominio": s.dominio,
-            "cod_productor": s.cod_productor,
-            "tipo": tipo_nombre,
-        }
-
-    for s in servicios:
-        tipo = tipos.get(s.tipo_servicio_id)
-        tipo_nombre = tipo.nombre if tipo is not None else None
-        hojas["servicios_total"].append(_fila(s, tipo_nombre))
-        if tipo is not None:
-            bucket = _clasificar_tipo(tipo)
-            if bucket in _AUTOMOTORES_BUCKETS:
-                hojas[f"servicios_{bucket}"].append(_fila(s, tipo_nombre))
-
-    sintesis = {
+    return {
         "nombre": cuadro.name,
         "aumento": _dec_str(cuadro.aumento),
         "capitas": {
@@ -244,22 +211,14 @@ def _construir_snapshot(
             "completo": cuadro.servicios_completo,
             "vip": cuadro.servicios_vip,
         },
-        "coef_uso": _dec_str(cuadro.coef_uso),
-        "coef_indice": _dec_str(cuadro.coef_indice),
+        "coef_uso": str(cuadro.coef_uso),
+        "coef_indice": str(cuadro.coef_indice),
         "valores": {
             "basico": _dec_str(cuadro.valor_basico),
             "completo": _dec_str(cuadro.valor_completo),
             "vip": _dec_str(cuadro.valor_vip),
         },
         "total_a_pagar": _dec_str(cuadro.total),
-    }
-
-    return {
-        "servicios_total": hojas["servicios_total"],
-        "servicios_basico": hojas["servicios_basico"],
-        "servicios_completo": hojas["servicios_completo"],
-        "servicios_vip": hojas["servicios_vip"],
-        "sintesis": sintesis,
     }
 
 
@@ -326,20 +285,31 @@ async def _cerrar_y_cascada(
 ) -> tuple[Cierre, bool]:
     """Recalculate, (optionally) demote, and insert the cierre for ``target``.
 
-    Returns ``(cierre, changed)`` where ``changed`` is True only when the recalculated
-    alicuota set differs from the current one and was replaced. Never commits: the
-    caller owns the single atomic ``commit()``.
+    Alícuotas are sparse: they are only stored when the aumento is non-zero (a
+    cambio). A zero aumento leaves the period with no alícuotas of its own, so it
+    inherits the previous effective set. Returns ``(cierre, changed)`` where
+    ``changed`` is True only when alícuotas were recalculated and stored (drives
+    the cascade). Never commits: the caller owns the single atomic ``commit()``.
     """
     prev = await uow.periodos.get_previous(target.anio, target.mes)
     changed = False
     if prev is not None:
-        prev_alicuotas = await uow.alicuotas.get_by_keys(periodo_id=prev.id)
-        recalculadas = recalcular_aumento(prev_alicuotas, dto.aumento)
-        nuevas = [a.model_copy(update={"periodo_id": target.id}) for a in recalculadas]
-        actuales = await uow.alicuotas.get_by_keys(periodo_id=target.id)
-        changed = not _mismo_conjunto(nuevas, actuales)
-        if changed:
-            await uow.alicuotas.reemplazar_por_periodo(target.id, nuevas)
+        prev_efectivas = await uow.alicuotas.get_effective(prev.anio, prev.mes)
+        if dto.aumento != 0:
+            recalculadas = recalcular_aumento(prev_efectivas, dto.aumento)
+            nuevas = [
+                a.model_copy(update={"periodo_id": target.id}) for a in recalculadas
+            ]
+            actuales = await uow.alicuotas.get_by_keys(periodo_id=target.id)
+            changed = not _mismo_conjunto(nuevas, actuales)
+            if changed:
+                await uow.alicuotas.reemplazar_por_periodo(target.id, nuevas)
+        else:
+            # sin aumento no se guardan alícuotas propias: el periodo hereda
+            actuales = await uow.alicuotas.get_by_keys(periodo_id=target.id)
+            changed = len(actuales) > 0
+            if changed:
+                await uow.alicuotas.reemplazar_por_periodo(target.id, [])
 
     if demote:
         await uow.cierres.demote_oficial(target.id)
@@ -369,10 +339,12 @@ async def _aplicar_cascada(
 ) -> None:
     """Re-close every later official period M in ascending ``(anio, mes)`` order.
 
-    Each M is recalculated from its immediate previous period's NEW alicuotas by M's
-    own ``aumento``, then demoted and re-inserted as ``origen=cascada``. Stops at the
-    first later period without an official cierre. ``motivo_base`` is the reason on the
-    origin cierre; cascaded cierres name the origin period instead.
+    Each M is recalculated from its previous effective alicuotas by M's own
+    ``aumento``, then demoted and re-inserted as ``origen=cascada``. Consistent
+    with the sparse model, M only stores its own alicuotas when its aumento is
+    non-zero; otherwise it inherits the previous effective set. Stops at the
+    first later period without an official cierre. ``motivo_base`` is the reason
+    on the origin cierre; cascaded cierres name the origin period instead.
     """
     for m in await uow.periodos.get_following(origen.anio, origen.mes):
         oficial_m = await uow.cierres.get_oficial(m.id)
@@ -381,10 +353,13 @@ async def _aplicar_cascada(
         prev_m = await uow.periodos.get_previous(m.anio, m.mes)
         if prev_m is None:
             break
-        prev_alicuotas = await uow.alicuotas.get_by_keys(periodo_id=prev_m.id)
-        recalculadas = recalcular_aumento(prev_alicuotas, oficial_m.aumento)
-        nuevas = [a.model_copy(update={"periodo_id": m.id}) for a in recalculadas]
-        await uow.alicuotas.reemplazar_por_periodo(m.id, nuevas)
+        prev_efectivas = await uow.alicuotas.get_effective(prev_m.anio, prev_m.mes)
+        if oficial_m.aumento != 0:
+            recalculadas = recalcular_aumento(prev_efectivas, oficial_m.aumento)
+            nuevas = [a.model_copy(update={"periodo_id": m.id}) for a in recalculadas]
+            await uow.alicuotas.reemplazar_por_periodo(m.id, nuevas)
+        else:
+            await uow.alicuotas.reemplazar_por_periodo(m.id, [])
         await uow.cierres.demote_oficial(m.id)
         snapshot_m = await _armar_snapshot(uow, m, oficial_m.aumento)
         version = await uow.cierres.next_version(m.id)
@@ -407,16 +382,16 @@ async def _armar_snapshot(
     aumento: Decimal,
     servicio_conteos: dict[int, int] | None = None,
 ) -> dict:
-    """Build the 5-sheet snapshot for ``periodo`` from live tables.
+    """Build the síntesis cuadro snapshot for ``periodo`` from live tables.
 
     Refetches capitas, servicios, alicuotas and tipos inside the transaction so
     it sees the just-replaced alicuota set. Used by both closure paths. When
     ``servicio_conteos`` is injected it becomes the service-count source (so
-    historical snapshots carry real s_* even with an empty ``servicio`` table);
+    historical snapshots carry real counts even with an empty ``servicio`` table);
     otherwise counts derive from the ``servicio`` table as before.
     """
     capitas = await uow.capitas_periodo.get_by_fields(periodo_id=periodo.id)
-    alicuotas = await uow.alicuotas.get_by_keys(periodo_id=periodo.id)
+    alicuotas = await uow.alicuotas.get_effective(periodo.anio, periodo.mes)
     servicios = await uow.servicios.get_by_fields(periodo_id=periodo.id)
     tipos_list = await uow.tipos_servicio.list()
     tipos = {t.id: t for t in tipos_list if t.id is not None}
@@ -426,16 +401,23 @@ async def _armar_snapshot(
     else:
         conteos = Counter(s.tipo_servicio_id for s in servicios)
     cuadro = computar_sintesis(capitas, alicuotas, conteos, tipos, periodo, aumento)
-    return _construir_snapshot(servicios, tipos, cuadro)
+    return _construir_snapshot(cuadro)
 
 
 async def _cuadro_de_cierre(uow: UnitOfWorkPort, c: Cierre) -> dict:
-    """Return a cierre's síntesis cuadro, recomputing on-demand when snapshot is null."""
+    """Return a cierre's síntesis cuadro, recomputing on-demand when snapshot is null.
+
+    Backward compatible: old snapshots wrapped the cuadro under ``"sintesis"``;
+    new snapshots store the cuadro directly.
+    """
     snapshot = c.snapshot
-    if snapshot is not None and isinstance(snapshot.get("sintesis"), dict):
-        return snapshot["sintesis"]
+    if snapshot is not None:
+        if isinstance(snapshot.get("sintesis"), dict):
+            return snapshot["sintesis"]
+        if isinstance(snapshot.get("capitas"), dict):
+            return snapshot
     periodo = await uow.periodos.get(c.periodo_id)
-    return (await _armar_snapshot(uow, periodo, c.aumento))["sintesis"]
+    return await _armar_snapshot(uow, periodo, c.aumento)
 
 
 async def armar_hoja_sintesis(
@@ -468,10 +450,13 @@ async def armar_hoja_sintesis(
 async def descargar_cierre_excel(uow: UnitOfWorkPort, periodo_id: int) -> bytes:
     """Return the official cierre's SOS workbook (5 sheets) as xlsx bytes.
 
-    Raises ``PeriodoNotClosedError`` when the period has no official cierre.
+    Combines the period's input sheets (``periodo.hojas_entrada``) with the
+    cierre's síntesis cuadro. Raises ``PeriodoNotClosedError`` when the period
+    has no official cierre.
     """
     oficial = await uow.cierres.get_oficial(periodo_id)
     if oficial is None:
         raise PeriodoNotClosedError(periodo_id)
     periodo = await uow.periodos.get(periodo_id)
-    return exportar_cierre(oficial.snapshot or {}, periodo.nombre).getvalue()
+    cuadro = await _cuadro_de_cierre(uow, oficial)
+    return exportar_cierre(periodo.hojas_entrada, cuadro, periodo.nombre).getvalue()

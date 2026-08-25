@@ -93,7 +93,9 @@ async def importar_servicios(
     touches a cierre.
     """
     requerir_admin(rol)
-    filas = ImportadorServiciosExcel().leer(archivo)
+    importador = ImportadorServiciosExcel()
+    filas = importador.leer(archivo)
+    hojas_entrada = importador.leer_hojas(archivo)
 
     tipos: dict[str, int] = {}
     pendientes: list[dict] = []
@@ -146,6 +148,11 @@ async def importar_servicios(
         eliminados = len(previos)
     else:
         raise ImportServiciosError(f"Modo inválido: {modo!r}")
+
+    periodo = await uow.periodos.get(periodo_id)
+    await uow.periodos.update(
+        periodo.model_copy(update={"hojas_entrada": hojas_entrada})
+    )
 
     await uow.commit()
     return {

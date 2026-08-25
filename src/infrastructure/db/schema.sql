@@ -10,10 +10,11 @@ CREATE TYPE categoria_servicio AS ENUM (
 
 
 CREATE TABLE IF NOT EXISTS periodo (
-    id        SERIAL PRIMARY KEY,
-    nombre    CITEXT NOT NULL CHECK (char_length(nombre) <= 20),
-    anio      INTEGER NOT NULL CHECK (anio BETWEEN 2014 AND 2100),
-    mes       INTEGER NOT NULL CHECK (mes BETWEEN 1 AND 12),
+    id             SERIAL PRIMARY KEY,
+    nombre         CITEXT NOT NULL CHECK (char_length(nombre) <= 20),
+    anio           INTEGER NOT NULL CHECK (anio BETWEEN 2014 AND 2100),
+    mes            INTEGER NOT NULL CHECK (mes BETWEEN 1 AND 12),
+    hojas_entrada  JSONB,
     UNIQUE (anio, mes)
 );
 CREATE INDEX IF NOT EXISTS idx_periodo_anio ON periodo (anio);

@@ -215,3 +215,23 @@ def test_import_sin_auto_cierre():
             assert await uow.cierres.list() == []
 
     run_test(main)
+
+
+def test_import_persiste_hojas_entrada_en_periodo():
+    async def main():
+        async with PostgresUoW() as uow:
+            p = await _crear_periodo(uow, 2026, 1, "Ene")
+            await _crear_ts(uow, "Automotores", "Básico", "659")
+            filas = [["S001", "15/10/2024", "ABC123", "659", "7"]]
+            await servicio.importar_servicios(
+                uow, p.id, _xlsx(filas), "upsert", rol=RolUsuario.ADMIN
+            )
+            recargado = await uow.periodos.get(p.id)
+            assert recargado.hojas_entrada is not None
+            assert len(recargado.hojas_entrada["hojas"]) == 4
+            # la hoja 1 lleva la fila capturada verbatim
+            data = recargado.hojas_entrada["hojas"][1]
+            assert data["encabezados"][0] == "Nº Servicio"
+            assert data["filas"][0][0] == "S001"
+
+    run_test(main)

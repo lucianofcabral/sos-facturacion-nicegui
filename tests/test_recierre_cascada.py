@@ -280,7 +280,8 @@ def test_generar_gap_breaks():
             mar_of = await uow.cierres.get_oficial(mar.id)
             assert mar_of.version == 1
             assert mar_of.origen == OrigenCierre.MANUAL
-            assert await _alicuota_vals(uow, mar.id) == {}
+            # modelo sparse: mar hereda la última efectiva (ene) a través del hueco
+            assert await _alicuota_vals(uow, mar.id) == {ts.id: 121.0}
 
     run_test(main)
 

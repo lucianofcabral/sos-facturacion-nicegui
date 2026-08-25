@@ -200,3 +200,30 @@ def test_leer_formato_viejo_columna_producto():
     assert filas[1].cod_productor == 1978
     assert filas[2].codigo_radio == "660"
     assert filas[2].cod_productor == 8
+
+
+# --- leer_hojas (captura verbatim de las 4 hojas de datos) ---------------------
+
+
+def test_leer_hojas_captura_4_hojas():
+    buf = _workbook(
+        [date(2024, 10, 1)],
+        [[["S001", "15/10/2024", "ABC123", "659", "7"]]],
+    )
+    hojas = ImportadorServiciosExcel().leer_hojas(buf)
+    assert len(hojas["hojas"]) == 4
+    # hoja 0 (mes) con su fecha
+    mes = hojas["hojas"][0]
+    assert mes["encabezados"] == ["fecha"]
+    assert mes["filas"] == [["2024-10-01"]]
+    # hoja 1 (659 Básico) con encabezados + fila verbatim
+    data = hojas["hojas"][1]
+    assert data["encabezados"] == [
+        "Nº Servicio", "Fecha", "Patente", "Código Radio", "Productor",
+    ]
+    assert data["filas"] == [["S001", "15/10/2024", "ABC123", "659", "7"]]
+    # hojas 2 y 3 vacías (solo encabezados)
+    assert hojas["hojas"][2]["filas"] == []
+    assert hojas["hojas"][3]["filas"] == []
+    # la hoja 4 (Síntesis) no se captura
+    assert all(h["nombre"] != "Síntesis" for h in hojas["hojas"])

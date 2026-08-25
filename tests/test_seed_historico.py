@@ -126,7 +126,7 @@ def test_seed_snapshot_carries_injected_counts():
         async with PostgresUoW() as uow:
             jul = (await uow.periodos.get_by_anio_mes(2014, 7))[0]
             oficial = await uow.cierres.get_oficial(jul.id)
-            sintesis = oficial.snapshot["sintesis"]
+            sintesis = oficial.snapshot
             # servicio table is empty: counts come from injected s_*
             assert sintesis["servicios"]["basico"] == 10
             assert sintesis["servicios"]["completo"] == 20
@@ -142,9 +142,9 @@ def test_seed_zero_month_noop():
         async with PostgresUoW() as uow:
             jul = (await uow.periodos.get_by_anio_mes(2014, 7))[0]
             ago = (await uow.periodos.get_by_anio_mes(2014, 8))[0]
-            jul_vals = {a.coeficiente: a.valor for a in await uow.alicuotas.get_by_keys(periodo_id=jul.id)}
-            ago_vals = {a.coeficiente: a.valor for a in await uow.alicuotas.get_by_keys(periodo_id=ago.id)}
-            assert ago_vals == jul_vals  # 0% aumento leaves values unchanged
+            jul_vals = {(a.tipo_servicio_id, a.coeficiente): a.valor for a in await uow.alicuotas.get_by_keys(periodo_id=jul.id)}
+            ago_vals = {(a.tipo_servicio_id, a.coeficiente): a.valor for a in await uow.alicuotas.get_effective(ago.anio, ago.mes)}
+            assert ago_vals == jul_vals  # 0% aumento: agosto hereda la efectiva de julio
 
     run_test(main)
 

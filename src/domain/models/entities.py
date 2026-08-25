@@ -13,6 +13,7 @@ class Periodo(BaseModel):
     nombre: str = Field(..., max_length=20)
     anio: int = Field(..., ge=2014, le=2100)
     mes: int = Field(..., ge=1, le=12)
+    hojas_entrada: dict | None = None
 
 
 class PeriodoConEstado(BaseModel):

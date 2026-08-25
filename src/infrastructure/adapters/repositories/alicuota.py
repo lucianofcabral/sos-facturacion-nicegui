@@ -85,3 +85,25 @@ class AlicuotaRepositoryPg(PostgresRepository, AlicuotaRepository):
                     "VALUES (%s, %s, %s, %s)",
                     rows,
                 )
+
+    async def get_effective(self, anio: int, mes: int) -> list[Alicuota]:
+        """Return the latest alícuotas at a period ``(anio, mes)`` or earlier.
+
+        Alícuotas are sparse: they only exist on periods whose cierre carried a
+        cambio (aumento distinto de cero). This returns the set of the most
+        recent such period at or before the given one, so a period without its
+        own alícuotas inherits the previous effective set.
+        """
+        sql = (
+            f"SELECT a.* FROM {self.table} a "
+            f"WHERE a.periodo_id = ("
+            f"  SELECT a2.periodo_id FROM {self.table} a2 "
+            f"  JOIN periodo p2 ON p2.id = a2.periodo_id "
+            f"  WHERE (p2.anio, p2.mes) <= (%s, %s) "
+            f"  ORDER BY p2.anio DESC, p2.mes DESC LIMIT 1"
+            f") ORDER BY a.coeficiente ASC"
+        )
+        async with self._conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(sql, (anio, mes))
+            rows = await cur.fetchall()
+        return [self._row_to_entity(r) for r in rows]

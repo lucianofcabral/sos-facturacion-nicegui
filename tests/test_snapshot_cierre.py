@@ -216,12 +216,15 @@ def test_add_snapshot_none_still_works():
     run_test(main)
 
 
-_SHEET_KEYS = {
-    "servicios_total",
-    "servicios_basico",
-    "servicios_completo",
-    "servicios_vip",
-    "sintesis",
+_SNAPSHOT_KEYS = {
+    "nombre",
+    "aumento",
+    "capitas",
+    "servicios",
+    "coef_uso",
+    "coef_indice",
+    "valores",
+    "total_a_pagar",
 }
 
 
@@ -256,14 +259,11 @@ def test_cerrar_periodo_puebla_snapshot():
             ene = await _armar_periodo_completo(uow, 2026, 1, "Ene")
             c = await cierre.cerrar_periodo(uow, ene.id, Decimal("0"))
             assert c.snapshot is not None
-            assert set(c.snapshot.keys()) == _SHEET_KEYS
-            sintesis = c.snapshot["sintesis"]
+            assert set(c.snapshot.keys()) == _SNAPSHOT_KEYS
+            sintesis = c.snapshot
             assert sintesis["capitas"]["total"] == 17
             assert sintesis["servicios"]["total"] == 18
             assert sintesis["total_a_pagar"] == "2150.00"
-            assert len(c.snapshot["servicios_basico"]) == 4
-            assert len(c.snapshot["servicios_completo"]) == 10
-            assert len(c.snapshot["servicios_vip"]) == 4
 
     run_test(main)
 
@@ -276,7 +276,7 @@ def test_generar_nuevo_cierre_puebla_snapshot_demoted_keeps_own():
             viejo = await uow.cierres.get_oficial(ene.id)
             nuevo = await cierre.generar_nuevo_cierre(uow, ene.id, Decimal("10"))
             assert nuevo.snapshot is not None
-            assert set(nuevo.snapshot.keys()) == _SHEET_KEYS
+            assert set(nuevo.snapshot.keys()) == _SNAPSHOT_KEYS
             demoted = await uow.cierres.get(viejo.id)
             assert demoted.estado == EstadoCierre.NO_OFICIAL
             assert demoted.snapshot is not None  # conserva el suyo
@@ -299,7 +299,7 @@ def test_cascade_cierres_snapshotted():
             for pid in (ene.id, feb.id):
                 oficial = await uow.cierres.get_oficial(pid)
                 assert oficial.snapshot is not None
-                assert set(oficial.snapshot.keys()) == _SHEET_KEYS
+                assert set(oficial.snapshot.keys()) == _SNAPSHOT_KEYS
             feb_of = await uow.cierres.get_oficial(feb.id)
             assert feb_of.origen == OrigenCierre.CASCADA
 
@@ -312,12 +312,8 @@ def test_sin_servicios_hojas_vacias_counts_cero():
             ene = await _armar_periodo_completo(uow, 2026, 1, "Ene", con_servicios=False)
             c = await cierre.cerrar_periodo(uow, ene.id, Decimal("0"))
             assert c.snapshot is not None
-            assert c.snapshot["servicios_total"] == []
-            assert c.snapshot["servicios_basico"] == []
-            assert c.snapshot["servicios_completo"] == []
-            assert c.snapshot["servicios_vip"] == []
-            assert c.snapshot["sintesis"]["servicios"]["total"] == 0
-            assert c.snapshot["sintesis"]["capitas"]["total"] == 17
+            assert c.snapshot["servicios"]["total"] == 0
+            assert c.snapshot["capitas"]["total"] == 17
 
     run_test(main)
 

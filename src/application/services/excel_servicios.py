@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from datetime import date, datetime
+from datetime import date, datetime, time
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -134,6 +134,27 @@ def _cell_str(value: Any) -> str:
     return str(value).strip()
 
 
+def _celda_json(value: Any) -> Any:
+    """Coerce a cell to a JSON-safe primitive for verbatim sheet capture.
+
+    Dates/times become ISO strings, numbers stay numeric, everything else is a
+    trimmed string. ``None`` stays ``None`` so the export can replay empty cells.
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, time):
+        return value.strftime("%H:%M:%S")
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value
+    return str(value).strip()
+
+
 class ImportadorServiciosExcel:
     """Reads a SOS workbook and returns the normalized ``FilaServicio`` rows."""
 
@@ -154,6 +175,39 @@ class ImportadorServiciosExcel:
             return filas
         finally:
             wb.close()
+
+    def leer_hojas(self, archivo: Path | BytesIO) -> dict:
+        """Capture the 4 data sheets (0-3) verbatim for ``periodo.hojas_entrada``.
+
+        Returns ``{"hojas": [{"nombre", "encabezados", "filas"}, ...]}`` where each
+        sheet keeps its real title and every row is a list of JSON-safe cell values
+        in header order. Sheet 4 (Síntesis) is intentionally not captured.
+        """
+        if isinstance(archivo, BytesIO):
+            archivo.seek(0)
+        wb = load_workbook(archivo, read_only=True, data_only=True)
+        try:
+            sheetnames = wb.sheetnames
+            if len(sheetnames) != 5:
+                raise ImportServiciosError(
+                    f"Se esperaban 5 hojas, se encontraron {len(sheetnames)}"
+                )
+            hojas = [self._capturar_hoja(wb[name], name) for name in sheetnames[0:4]]
+            return {"hojas": hojas}
+        finally:
+            wb.close()
+
+    def _capturar_hoja(self, ws: Worksheet, nombre: str) -> dict:
+        rows = list(ws.iter_rows(values_only=True))
+        if not rows:
+            return {"nombre": nombre, "encabezados": [], "filas": []}
+        encabezados = [_celda_json(c) for c in rows[0]]
+        filas = [
+            [_celda_json(c) for c in row]
+            for row in rows[1:]
+            if any(c not in (None, "") for c in row)
+        ]
+        return {"nombre": nombre, "encabezados": encabezados, "filas": filas}
 
     def _validar_mes_unico(self, ws: Worksheet) -> None:
         """Fail when sheet 0 holds dates spanning more than one month."""

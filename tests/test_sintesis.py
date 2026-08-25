@@ -9,7 +9,6 @@ name), and the JSON-native snapshot builder.
 from __future__ import annotations
 
 import json
-from datetime import date
 from decimal import Decimal
 
 from src.application.use_cases.cierre import _construir_snapshot, computar_sintesis
@@ -17,7 +16,6 @@ from src.domain.models.entities import (
     Alicuota,
     CapitaPeriodo,
     Periodo,
-    Servicio,
     SintesisPeriodo,
     TipoServicio,
 )
@@ -247,85 +245,49 @@ def test_computar_sintesis_coef_excluye_ramas():
 # --- _construir_snapshot -------------------------------------------------------
 
 
-def test_construir_snapshot_5_keys_full_rows():
-    tipos = {1: _tipo(1, "basico"), 2: _tipo(2, "completo")}
-    servicios = [
-        Servicio(
-            nro_servicio="S001",
-            codigo_radio="R1",
-            fecha=date(2026, 1, 15),
-            dominio="ABC123",
-            cod_productor=7,
-            periodo_id=1,
-            tipo_servicio_id=1,
-        ),
-        Servicio(
-            nro_servicio="S002",
-            codigo_radio="R2",
-            fecha=date(2026, 1, 16),
-            dominio="XYZ789",
-            cod_productor=8,
-            periodo_id=1,
-            tipo_servicio_id=2,
-        ),
-    ]
-    cuadro = _run([_capita(1, 10), _capita(2, 5)], [], {1: 4, 2: 10}, tipos)
-    snap = _construir_snapshot(servicios, tipos, cuadro)
+def test_construir_snapshot_devuelve_cuadro_solo():
+    tipos = {1: _tipo(1, "basico"), 2: _tipo(2, "completo"), 3: _tipo(3, "vip")}
+    cuadro = _run(
+        [_capita(1, 10), _capita(2, 5), _capita(3, 2)],
+        [],
+        {1: 4, 2: 10, 3: 4},
+        tipos,
+    )
+    snap = _construir_snapshot(cuadro)
+    # ya no hay claves servicios_* ni wrapper "sintesis": solo el cuadro
     assert set(snap.keys()) == {
-        "servicios_total",
-        "servicios_basico",
-        "servicios_completo",
-        "servicios_vip",
-        "sintesis",
+        "nombre",
+        "aumento",
+        "capitas",
+        "servicios",
+        "coef_uso",
+        "coef_indice",
+        "valores",
+        "total_a_pagar",
     }
-    assert snap["servicios_basico"] == [
-        {
-            "nro_servicio": "S001",
-            "codigo_radio": "R1",
-            "fecha": "2026-01-15",
-            "dominio": "ABC123",
-            "cod_productor": 7,
-            "tipo": "Básico",
-        }
-    ]
-    assert snap["servicios_completo"] == [
-        {
-            "nro_servicio": "S002",
-            "codigo_radio": "R2",
-            "fecha": "2026-01-16",
-            "dominio": "XYZ789",
-            "cod_productor": 8,
-            "tipo": "Completo",
-        }
-    ]
-    assert snap["servicios_vip"] == []
-    assert len(snap["servicios_total"]) == 2
-    # json.dumps must not raise on Decimal/date (all JSON-native)
     json.dumps(snap)
 
 
-def test_construir_snapshot_empty_sheets():
+def test_construir_snapshot_empty():
     cuadro = _run([], [], {}, {})
-    snap = _construir_snapshot([], {}, cuadro)
-    assert snap["servicios_total"] == []
-    assert snap["servicios_basico"] == []
-    assert snap["servicios_completo"] == []
-    assert snap["servicios_vip"] == []
-    sintesis = snap["sintesis"]
-    assert sintesis["capitas"]["total"] == 0
-    assert sintesis["servicios"]["total"] == 0
-    assert sintesis["total_a_pagar"] == "0.00"
+    snap = _construir_snapshot(cuadro)
+    assert snap["capitas"]["total"] == 0
+    assert snap["servicios"]["total"] == 0
+    assert snap["total_a_pagar"] == "0.00"
     json.dumps(snap)
 
 
 def test_construir_snapshot_sintesis_shape():
-    cuadro = _run([_capita(1, 10), _capita(2, 5), _capita(3, 2)], [], {1: 4, 2: 10, 3: 4},
-                  {1: _tipo(1, "basico"), 2: _tipo(2, "completo"), 3: _tipo(3, "vip")})
-    snap = _construir_snapshot([], {}, cuadro)
-    sintesis = snap["sintesis"]
-    assert sintesis["nombre"] == "Enero 2026"
-    assert sintesis["aumento"] == "10.00"
-    assert sintesis["capitas"] == {
+    cuadro = _run(
+        [_capita(1, 10), _capita(2, 5), _capita(3, 2)],
+        [],
+        {1: 4, 2: 10, 3: 4},
+        {1: _tipo(1, "basico"), 2: _tipo(2, "completo"), 3: _tipo(3, "vip")},
+    )
+    snap = _construir_snapshot(cuadro)
+    assert snap["nombre"] == "Enero 2026"
+    assert snap["aumento"] == "10.00"
+    assert snap["capitas"] == {
         "total": 17,
         "basico": 10,
         "completo": 5,
@@ -334,7 +296,7 @@ def test_construir_snapshot_sintesis_shape():
         "rama_89": 0,
         "rama_90": 0,
     }
-    assert sintesis["servicios"] == {"total": 18, "basico": 4, "completo": 10, "vip": 4}
-    assert sintesis["coef_uso"] == "1.06"
-    assert sintesis["valores"] == {"basico": "0.00", "completo": "0.00", "vip": "0.00"}
-    assert sintesis["total_a_pagar"] == "0.00"
+    assert snap["servicios"] == {"total": 18, "basico": 4, "completo": 10, "vip": 4}
+    assert snap["coef_uso"] == "1.0588"
+    assert snap["valores"] == {"basico": "0.00", "completo": "0.00", "vip": "0.00"}
+    assert snap["total_a_pagar"] == "0.00"
