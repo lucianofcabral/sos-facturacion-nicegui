@@ -24,6 +24,9 @@ async def open_form_dialog(
     initial: dict | None = None,
     info: list[dict] | None = None,
     on_change=None,
+    width: str = "w-[32rem]",
+    submit_label: str = "Guardar",
+    cancel_label: str = "Cancelar",
 ) -> None:
     initial = initial or {}
     info = info or []
@@ -38,7 +41,7 @@ async def open_form_dialog(
             return datetime.strptime(raw, "%Y-%m-%d").date()
         return raw
 
-    with ui.dialog() as dialog, ui.card().classes("w-96"):
+    with ui.dialog() as dialog, ui.card().classes(width):
         ui.label(title).classes("text-h6")
         for item in info:
             ui.label(f"{item['label']}: {item['value']}").classes("text-caption")
@@ -100,7 +103,7 @@ async def open_form_dialog(
             await _revalidate()
 
         with ui.row():
-            ui.button("Cancelar", on_click=dialog.close)
+            ui.button(cancel_label, on_click=dialog.close)
 
             async def _submit() -> None:
                 values = {f["key"]: _coerce(f, widgets[f["key"]].value) for f in fields}
@@ -110,5 +113,5 @@ async def open_form_dialog(
                 except Exception as exc:
                     ui.notify(f"Error: {exc}", type="negative")
 
-            ui.button("Guardar", on_click=_submit)
+            ui.button(submit_label, on_click=_submit)
     dialog.open()
