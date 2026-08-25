@@ -1,0 +1,53 @@
+# Stack de producción: db (Postgres) + app (imagen publicada en Docker Hub).
+# En Portainer: Stacks → Add stack → Web editor → pegar este archivo + las
+# variables de entorno (las del .env) en la pestaña "Environment variables".
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sos-facturacion-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Dump para restore: subilo desde Portainer → Volumes → backups → Browse.
+      # Aparece en /backups dentro del contenedor.
+      - backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    ports:
+      - "5440:5432"
+
+  app:
+    image: ${IMAGE:-fecca81/sos-facturacion:0.1.2}
+    container_name: sos-facturacion-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # La app se conecta por la red interna del stack (host = nombre del servicio)
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      ADMIN_NOMBRE: ${ADMIN_NOMBRE}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      STORAGE_SECRET: ${STORAGE_SECRET}
+      HOST: 0.0.0.0
+      RELOAD: "false"
+      RESPONSE_TIMEOUT: ${RESPONSE_TIMEOUT:-30}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      # Storage de sesiones NiceGUI (app.storage.user) persistente
+      - nicegui_storage:/app/.nicegui
+
+volumes:
+  pgdata:
+  nicegui_storage:
+  backups:

@@ -7,6 +7,7 @@ cierre (aumento + generar/regenerar con previsualización) y servicios (import
 
 from __future__ import annotations
 
+import os
 from io import BytesIO
 
 from nicegui import ui
@@ -197,7 +198,10 @@ async def _importar(periodo_id: int) -> None:
         ui.upload(on_upload=_on_upload, auto_upload=True).props('accept=".xlsx"')
 
 
-@ui.page("/periodo/{periodo_id}")
+RESPONSE_TIMEOUT = float(os.getenv("RESPONSE_TIMEOUT", "30"))
+
+
+@ui.page("/periodo/{periodo_id}", response_timeout=RESPONSE_TIMEOUT)
 async def detalle(periodo_id: int) -> None:
     if not usuario_autenticado():
         ui.navigate.to("/")

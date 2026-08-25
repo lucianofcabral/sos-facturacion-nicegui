@@ -7,6 +7,8 @@ registro de rutas de ``@ui.page``.
 
 from __future__ import annotations
 
+import os
+
 from nicegui import ui
 
 from src.application.use_cases import usuario as usuario_uc
@@ -28,8 +30,10 @@ from src.ui.session import (
     usuario_autenticado,
 )
 
+RESPONSE_TIMEOUT = float(os.getenv("RESPONSE_TIMEOUT", "30"))
 
-@ui.page("/")
+
+@ui.page("/", response_timeout=RESPONSE_TIMEOUT)
 async def index() -> None:
     if usuario_autenticado():
         await _render_app(get_current_user())
