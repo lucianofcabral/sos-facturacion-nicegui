@@ -1,4 +1,4 @@
-"""Campos de los diálogos de tipo de servicio."""
+"""Campos y validación de los diálogos de tipo de servicio."""
 
 from __future__ import annotations
 
@@ -12,9 +12,9 @@ CATEGORIA_OPTS = [
 ]
 
 TIPO_SERVICIO_FIELDS = [
-    {"key": "rama", "label": "Rama", "type": "text"},
     {"key": "nombre", "label": "Nombre", "type": "text"},
-    {"key": "codigo", "label": "Código", "type": "text"},
+    {"key": "rama", "label": "Rama", "type": "text"},
+    {"key": "codigo", "label": "Código (único)", "type": "text"},
     {
         "key": "categoria",
         "label": "Categoría",
@@ -22,3 +22,24 @@ TIPO_SERVICIO_FIELDS = [
         "options": CATEGORIA_OPTS,
     },
 ]
+
+
+def validar_tipo_servicio(values: dict) -> str | None:
+    """Advertencia de validación para el formulario (``None`` = válido).
+
+    Refleja las restricciones de ``TipoServicio`` (campos obligatorios y
+    longitudes máximas) para dar pistas antes de enviar.
+    """
+    rama = str(values.get("rama") or "").strip()
+    nombre = str(values.get("nombre") or "").strip()
+    codigo = str(values.get("codigo") or "").strip()
+    categoria = values.get("categoria")
+    if not rama or not nombre or not codigo or not categoria:
+        return "Rama, nombre, código y categoría son obligatorios."
+    if len(rama) > 25:
+        return "La rama no puede superar 25 caracteres."
+    if len(nombre) > 50:
+        return "El nombre no puede superar 50 caracteres."
+    if len(codigo) > 10:
+        return "El código no puede superar 10 caracteres."
+    return None
