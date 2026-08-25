@@ -18,6 +18,7 @@ from src.domain.dto.create import CreatePeriodo
 from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.dialogos import open_form_dialog
 from src.ui.dialogos.periodo import PERIODO_FIELDS
+from src.ui.formatos import format_ars
 
 _PAGE_SIZE = 24
 
@@ -77,7 +78,7 @@ def _render_sintesis(cuadro: dict) -> None:
     valores = cuadro.get("valores") or {}
 
     ui.label("Total a pagar").classes("text-caption")
-    ui.label(cuadro.get("total_a_pagar", "—")).classes("text-h5 text-primary")
+    ui.label(format_ars(cuadro.get("total_a_pagar"))).classes("text-h5 text-primary")
 
     with ui.grid(columns="repeat(2, minmax(0, 1fr))").classes(
         "w-full gap-x-4 gap-y-1 mt-1"
@@ -101,7 +102,7 @@ def _render_card(container: ui.element, p: dict) -> None:
     with (
         container,
         ui.card()
-        .classes("w-80 cursor-pointer hover:shadow-md")
+        .classes("w-full cursor-pointer hover:shadow-md")
         .on("click", lambda pid=p["id"]: ui.navigate.to(f"/periodo/{pid}")),
     ):
         with ui.row().classes("w-full items-center justify-between"):
@@ -119,7 +120,7 @@ def _render_card(container: ui.element, p: dict) -> None:
             elif p["total"] is not None:
                 with ui.column().classes("mt-2 items-start"):
                     ui.label("Total oficial").classes("text-caption")
-                    ui.label(f"{p['total']:,.2f}").classes("text-h5 text-primary")
+                    ui.label(format_ars(p["total"])).classes("text-h5 text-primary")
         else:
             ui.label("Sin cierre oficial").classes("text-caption text-grey-7 mt-1")
 
@@ -133,7 +134,7 @@ async def render(_user: dict) -> None:
             ui.label("Periodos").classes("text-h5")
             ui.button("Nuevo periodo", on_click=_crear_periodo)
 
-        container = ui.row().classes("flex-wrap gap-4")
+        container = ui.grid(columns=3).classes("w-full gap-4")
 
         def _render_page(page: int) -> None:
             container.clear()

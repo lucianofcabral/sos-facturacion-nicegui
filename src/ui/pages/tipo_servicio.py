@@ -8,6 +8,8 @@ acciones de edición y eliminación por card (contrato CRUD sin cambios).
 
 from __future__ import annotations
 
+import math
+
 from nicegui import ui
 
 from src.application.use_cases import tipo_servicio as uc
@@ -132,7 +134,7 @@ def _render_card(container: ui.element, t: dict) -> None:
     categoria = t["categoria"]
     color = CATEGORIA_COLORS.get(categoria, "#64748B")
     etiqueta = _CATEGORIA_LABELS.get(categoria, categoria)
-    with ui.card().classes("w-72 gap-2"):
+    with ui.card().classes("w-full gap-2"):
         ui.element("div").classes("w-full").style(
             f"height: 4px; background-color: {color}; border-radius: 9999px;"
         )
@@ -157,10 +159,13 @@ def _render_card(container: ui.element, t: dict) -> None:
 
 async def render(_user: dict) -> None:
     items = await _load()
+    # Grid de tantas columnas como haga falta para mostrar todo en exactamente
+    # dos filas: automotores arriba y ramas abajo (el orden ya viene de ``_load``).
+    columnas = max(1, math.ceil(len(items) / 2))
     with ui.column().classes("w-full gap-4"):
         with ui.row().classes("w-full items-center justify-between"):
             ui.label("Tipos de servicio").classes("text-h5")
             ui.button("Nuevo tipo", on_click=_open_create)
-        container = ui.row().classes("w-full flex-wrap gap-4")
+        container = ui.grid(columns=columnas).classes("w-full gap-4")
         for t in items:
             _render_card(container, t)
