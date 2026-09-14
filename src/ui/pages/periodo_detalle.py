@@ -7,6 +7,7 @@ cierre (aumento + generar/regenerar con previsualización) y servicios (import
 
 from __future__ import annotations
 
+from datetime import date
 from io import BytesIO
 
 from nicegui import ui
@@ -48,8 +49,7 @@ _SERVICIO_COLUMNS = [
     {"name": "cod_productor", "label": "Productor", "field": "cod_productor"},
 ]
 
-# Columnas sobre las que aplica el filtro de texto (LIKE, case-insensitive).
-_SERVICIO_TEXT_FIELDS = ("nro_servicio", "codigo_radio", "dominio", "cod_productor")
+_SERVICIO_PAGE_SIZE = 15
 
 # Grupos de cápitas: automotores en la fila de arriba, ramas varias en la de
 # abajo. El orden dentro de cada grupo es por nombre.
@@ -89,10 +89,26 @@ async def _load_capitas(periodo_id: int) -> list[dict]:
     ]
 
 
-async def _load_servicios(periodo_id: int) -> list[dict]:
+async def _cargar_pagina(
+    periodo_id: int,
+    *,
+    texto: str | None = None,
+    desde: str | None = None,
+    hasta: str | None = None,
+    page: int = 1,
+    page_size: int = _SERVICIO_PAGE_SIZE,
+) -> tuple[list[dict], int]:
     async with PostgresUoW() as uow:
-        items = await uow.servicios.get_by_fields(periodo_id=periodo_id)
-    return [
+        pagina = await servicio_uc.buscar_servicios(
+            uow,
+            periodo_id,
+            texto=texto,
+            desde=date.fromisoformat(desde) if desde else None,
+            hasta=date.fromisoformat(hasta) if hasta else None,
+            page=page,
+            page_size=page_size,
+        )
+    rows = [
         {
             "nro_servicio": s.nro_servicio,
             "codigo_radio": s.codigo_radio,
@@ -100,8 +116,9 @@ async def _load_servicios(periodo_id: int) -> list[dict]:
             "dominio": s.dominio,
             "cod_productor": s.cod_productor,
         }
-        for s in items
+        for s in pagina.rows
     ]
+    return rows, pagina.total
 
 
 async def _guardar_capitas(periodo_id: int, widgets: dict[int, object]) -> None:
@@ -253,14 +270,17 @@ async def detalle(periodo_id: int) -> None:
             color = CATEGORIA_COLORS.get(c["categoria"], "#64748B")
             with ui.card().classes("gap-1"):
                 ui.element("div").classes("w-full").style(
-                    f"height: 3px; background-color: {color};"
-                    " border-radius: 9999px;"
+                    f"height: 3px; background-color: {color}; border-radius: 9999px;"
                 )
                 ui.label(c["tipo_nombre"]).classes("text-caption text-grey-7")
-                widgets[c["tipo_servicio_id"]] = ui.number(
-                    value=c["capitas"] if c["capitas"] is not None else 0,
-                    min=0,
-                ).props("dense outlined").classes("w-full")
+                widgets[c["tipo_servicio_id"]] = (
+                    ui.number(
+                        value=c["capitas"] if c["capitas"] is not None else 0,
+                        min=0,
+                    )
+                    .props("dense outlined")
+                    .classes("w-full")
+                )
 
         with ui.card().classes("w-full gap-3"):
             with ui.row().classes("w-full items-center justify-between"):
@@ -311,8 +331,6 @@ async def detalle(periodo_id: int) -> None:
             with ui.card().classes("w-full gap-3"):
                 ui.label("Servicios").classes("text-h6")
 
-                all_rows = await _load_servicios(periodo_id)
-
                 # Todos los filtros + acciones en una única fila horizontal,
                 # arriba de la tabla (antes estaban debajo de la paginación).
                 with ui.row().classes("w-full items-center gap-2 flex-wrap"):
@@ -322,33 +340,43 @@ async def detalle(periodo_id: int) -> None:
                     filtrar_btn = ui.button("Filtrar")
                     limpiar_btn = ui.button("Limpiar filtros").props("flat")
 
-                table = ui.table(
-                    rows=all_rows,
-                    columns=_SERVICIO_COLUMNS,
-                    pagination={"rowsPerPage": 15},
-                ).classes("w-full")
-
-                def _aplica_filtros() -> None:
-                    t = (texto.value or "").strip().lower()
-                    rows: list[dict] = []
-                    for r in all_rows:
-                        if t and not any(
-                            t in str(r[c] or "").lower() for c in _SERVICIO_TEXT_FIELDS
-                        ):
-                            continue
-                        if desde.value and r["fecha"] < desde.value:
-                            continue
-                        if hasta.value and r["fecha"] > hasta.value:
-                            continue
-                        rows.append(r)
-                    table.rows = rows
+                async def _fetch(page: int) -> None:
+                    filas, total = await _cargar_pagina(
+                        periodo_id,
+                        texto=(texto.value or "").strip() or None,
+                        desde=desde.value or None,
+                        hasta=hasta.value or None,
+                        page=page,
+                    )
+                    table.rows = filas
+                    table.pagination["page"] = page
+                    table.pagination["rowsNumber"] = total
                     table.update()
 
-                def _limpiar_filtros() -> None:
+                async def _on_pagination(e) -> None:
+                    await _fetch(int(e.value["page"]))
+
+                rows, total = await _cargar_pagina(periodo_id)
+
+                table = ui.table(
+                    rows=rows,
+                    columns=_SERVICIO_COLUMNS,
+                    pagination={
+                        "rowsPerPage": _SERVICIO_PAGE_SIZE,
+                        "page": 1,
+                        "rowsNumber": total,
+                    },
+                    on_pagination_change=_on_pagination,
+                ).classes("w-full")
+
+                async def _aplica_filtros() -> None:
+                    await _fetch(1)
+
+                async def _limpiar_filtros() -> None:
                     texto.value = ""
                     desde.value = None
                     hasta.value = None
-                    _aplica_filtros()
+                    await _fetch(1)
 
                 filtrar_btn.on_click(_aplica_filtros)
                 limpiar_btn.on_click(_limpiar_filtros)

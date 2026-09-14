@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from io import BytesIO
 from pathlib import Path
 from typing import Literal
@@ -11,7 +12,7 @@ from src.application.services.excel_servicios import ImportadorServiciosExcel
 from src.domain.dto import CreateServicio, EditServicio
 from src.domain.enums import RolUsuario
 from src.domain.exceptions import ImportServiciosError
-from src.domain.models.entities import Servicio
+from src.domain.models.entities import PaginaServicios, Servicio
 from src.domain.ports.uow import UnitOfWorkPort
 
 
@@ -35,6 +36,20 @@ async def crear_servicio(
 
 async def listar_servicios(uow: UnitOfWorkPort) -> list[Servicio]:
     return await uow.servicios.list()
+
+
+async def buscar_servicios(
+    uow: UnitOfWorkPort,
+    periodo_id: int,
+    *,
+    texto: str | None = None,
+    desde: date | None = None,
+    hasta: date | None = None,
+    page: int = 1,
+    page_size: int = 15,
+) -> PaginaServicios:
+    """Read-only: one filtered page of a period's services plus the total."""
+    return await uow.servicios.search(periodo_id, texto, desde, hasta, page, page_size)
 
 
 async def editar_servicio(
