@@ -489,6 +489,28 @@ async def _cuadro_de_cierre(uow: UnitOfWorkPort, c: Cierre) -> dict:
     return await _armar_snapshot(uow, periodo, c.aumento)
 
 
+async def _cuadro_actual_y_previos(
+    uow: UnitOfWorkPort, periodo_id: int
+) -> tuple[dict | None, list[dict]]:
+    """Return ``(actual, previos)`` cuadros for ``periodo_id``.
+
+    ``previos`` holds up to 12 previous official cierres ordered by descending
+    recency, each from its snapshot (recomputed on-demand when null, for legacy
+    parity). ``actual`` is the current official cierre's cuadro or ``None``.
+    """
+    oficial_actual = await uow.cierres.get_oficial(periodo_id)
+    actual = (
+        await _cuadro_de_cierre(uow, oficial_actual)
+        if oficial_actual is not None
+        else None
+    )
+
+    previos: list[dict] = []
+    for c in await uow.cierres.get_oficiales_recientes(periodo_id, limit=12):
+        previos.append(await _cuadro_de_cierre(uow, c))
+    return actual, previos
+
+
 async def armar_hoja_sintesis(
     uow: UnitOfWorkPort, anio: int, mes: int
 ) -> dict:
@@ -502,17 +524,7 @@ async def armar_hoja_sintesis(
     if not periodos:
         return {"actual": None, "previos": []}
     target = periodos[0]
-
-    oficial_actual = await uow.cierres.get_oficial(target.id)
-    actual = (
-        await _cuadro_de_cierre(uow, oficial_actual)
-        if oficial_actual is not None
-        else None
-    )
-
-    previos: list[dict] = []
-    for c in await uow.cierres.get_oficiales_recientes(target.id, limit=12):
-        previos.append(await _cuadro_de_cierre(uow, c))
+    actual, previos = await _cuadro_actual_y_previos(uow, target.id)
     return {"actual": actual, "previos": previos}
 
 
@@ -520,12 +532,15 @@ async def descargar_cierre_excel(uow: UnitOfWorkPort, periodo_id: int) -> bytes:
     """Return the official cierre's SOS workbook (5 sheets) as xlsx bytes.
 
     Combines the period's input sheets (``periodo.hojas_entrada``) with the
-    cierre's síntesis cuadro. Raises ``PeriodoNotClosedError`` when the period
-    has no official cierre.
+    cierre's síntesis cuadro plus up to 12 previous cuadros on the ``Síntesis``
+    sheet. Raises ``PeriodoNotClosedError`` when the period has no official
+    cierre.
     """
     oficial = await uow.cierres.get_oficial(periodo_id)
     if oficial is None:
         raise PeriodoNotClosedError(periodo_id)
     periodo = await uow.periodos.get(periodo_id)
-    cuadro = await _cuadro_de_cierre(uow, oficial)
-    return exportar_cierre(periodo.hojas_entrada, cuadro, periodo.nombre).getvalue()
+    cuadro, previos = await _cuadro_actual_y_previos(uow, periodo_id)
+    return exportar_cierre(
+        periodo.hojas_entrada, cuadro, periodo.nombre, previos=previos
+    ).getvalue()
