@@ -12,6 +12,8 @@ _KEY = "sos_user"
 
 THEME_KEY = "sos_theme"
 
+TAB_KEY = "sos_tab"
+
 
 def set_current_user(id: UUID, nombre: str, rol: RolUsuario) -> None:
     # 'user' (no 'client') persiste entre reloads; requiere storage_secret en ui.run().
@@ -71,3 +73,18 @@ def ensure_theme() -> None:
     """
     if THEME_KEY not in app.storage.user:
         set_current_theme(True)
+
+
+def get_current_tab() -> str:
+    """Return the persisted main-tab name, defaulting to ``periodos``.
+
+    Subpages (e.g. the period detail) live on their own route, so the shell's
+    drawer can't switch tab panels locally; they store the target tab here and
+    navigate to ``/``, which restores it.
+    """
+    return str(app.storage.user.get(TAB_KEY, "periodos"))
+
+
+def set_current_tab(name: str) -> None:
+    """Persist the selected main tab for the current session."""
+    app.storage.user[TAB_KEY] = name
