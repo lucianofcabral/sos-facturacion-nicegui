@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from datetime import date
+
 from psycopg.rows import dict_row
 
 from src.domain.enums import CategoriaServicio
 from src.domain.models.entities import (
     ConteoCategoriaPeriodo,
     ConteoProductor,
+    PaginaServicios,
     Servicio,
 )
 from src.domain.ports.repositories import ServicioRepository
@@ -57,6 +60,46 @@ class ServicioRepositoryPg(PostgresRepository, ServicioRepository):
             await cur.execute(sql, params)
             rows = await cur.fetchall()
         return [self._row_to_entity(r) for r in rows]
+
+    async def search(
+        self,
+        periodo_id: int,
+        texto: str | None = None,
+        desde: date | None = None,
+        hasta: date | None = None,
+        page: int = 1,
+        page_size: int = 15,
+    ) -> PaginaServicios:
+        conditions = ["periodo_id = %s"]
+        params: list[object] = [periodo_id]
+        if texto:
+            term = f"%{texto}%"
+            conditions.append(
+                "(nro_servicio ILIKE %s OR codigo_radio ILIKE %s "
+                "OR dominio ILIKE %s OR cod_productor::text ILIKE %s)"
+            )
+            params.extend([term, term, term, term])
+        if desde is not None:
+            conditions.append("fecha >= %s")
+            params.append(desde)
+        if hasta is not None:
+            conditions.append("fecha <= %s")
+            params.append(hasta)
+
+        where = " AND ".join(conditions)
+        offset = (page - 1) * page_size
+        count_sql = f"SELECT COUNT(*)::int AS total FROM {self.table} WHERE {where}"
+        page_sql = (
+            f"SELECT * FROM {self.table} WHERE {where} "
+            "ORDER BY nro_servicio LIMIT %s OFFSET %s"
+        )
+        async with self._conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(count_sql, params)
+            row = await cur.fetchone()
+            total = row["total"] if row is not None else 0
+            await cur.execute(page_sql, [*params, page_size, offset])
+            rows = await cur.fetchall()
+        return PaginaServicios(rows=[self._row_to_entity(r) for r in rows], total=total)
 
     async def reemplazar_por_periodo(
         self, periodo_id: int, servicios: list[Servicio]

@@ -8,6 +8,7 @@ cierre (aumento + generar/regenerar con previsualización) y servicios (import
 from __future__ import annotations
 
 import os
+from datetime import date
 from io import BytesIO
 
 from nicegui import ui
@@ -28,6 +29,7 @@ from src.domain.dto.create import CreateCapitaPeriodo
 from src.domain.dto.edit import EditCapitaPeriodo, EditPeriodo
 from src.domain.exceptions import PeriodoNotClosedError
 from src.infrastructure.adapters.uow import PostgresUoW
+from src.ui.componentes import shell
 from src.ui.dialogos import open_form_dialog
 from src.ui.dialogos.pendientes import resolver_pendientes
 from src.ui.dialogos.periodo import PERIODO_FIELDS, open_cierre_dialog
@@ -48,19 +50,13 @@ _SERVICIO_COLUMNS = [
     {"name": "cod_productor", "label": "Productor", "field": "cod_productor"},
 ]
 
-# Columnas sobre las que aplica el filtro de texto (LIKE, case-insensitive).
-_SERVICIO_TEXT_FIELDS = ("nro_servicio", "codigo_radio", "dominio", "cod_productor")
+_SERVICIO_PAGE_SIZE = 15
 
-# Orden estable de categorías y su etiqueta legible para el grid de cápitas.
-_CATEGORIA_ORDEN = ("basico", "completo", "vip", "rama_87", "rama_89", "rama_90")
-_CATEGORIA_LABELS = {
-    "basico": "Básico",
-    "completo": "Completo",
-    "vip": "VIP",
-    "rama_87": "Rama 87",
-    "rama_89": "Rama 89",
-    "rama_90": "Rama 90",
-}
+# Grupos de cápitas: automotores en la fila de arriba, ramas varias en la de
+# abajo. El orden dentro de cada grupo es por nombre.
+_CATEGORIAS_AUTOMOTORES = ("basico", "completo", "vip")
+_CATEGORIAS_RAMAS = ("rama_87", "rama_89", "rama_90")
+_CATEGORIA_ORDEN = _CATEGORIAS_AUTOMOTORES + _CATEGORIAS_RAMAS
 
 
 async def _load_periodo(periodo_id: int) -> dict:
@@ -94,10 +90,26 @@ async def _load_capitas(periodo_id: int) -> list[dict]:
     ]
 
 
-async def _load_servicios(periodo_id: int) -> list[dict]:
+async def _cargar_pagina(
+    periodo_id: int,
+    *,
+    texto: str | None = None,
+    desde: str | None = None,
+    hasta: str | None = None,
+    page: int = 1,
+    page_size: int = _SERVICIO_PAGE_SIZE,
+) -> tuple[list[dict], int]:
     async with PostgresUoW() as uow:
-        items = await uow.servicios.get_by_fields(periodo_id=periodo_id)
-    return [
+        pagina = await servicio_uc.buscar_servicios(
+            uow,
+            periodo_id,
+            texto=texto,
+            desde=date.fromisoformat(desde) if desde else None,
+            hasta=date.fromisoformat(hasta) if hasta else None,
+            page=page,
+            page_size=page_size,
+        )
+    rows = [
         {
             "nro_servicio": s.nro_servicio,
             "codigo_radio": s.codigo_radio,
@@ -105,8 +117,9 @@ async def _load_servicios(periodo_id: int) -> list[dict]:
             "dominio": s.dominio,
             "cod_productor": s.cod_productor,
         }
-        for s in items
+        for s in pagina.rows
     ]
+    return rows, pagina.total
 
 
 async def _guardar_capitas(periodo_id: int, widgets: dict[int, object]) -> None:
@@ -210,9 +223,11 @@ async def detalle(periodo_id: int) -> None:
     user = get_current_user()
     es_admin = is_admin(user)
 
-    with ui.column().classes("w-full gap-4"):
-        ui.link("← Periodos", "/").classes("text-caption")
+    # Mismo shell que el resto de la app (header + drawer) para no perder la
+    # navegación al entrar a la subpage. La tab "Periodos" queda activa.
+    shell.render_subpage(user, active="periodos")
 
+    with ui.column().classes("w-full gap-4"):
         # --- Encabezado --------------------------------------------------------
         with ui.card().classes("w-full"):  # noqa: SIM117 (nesting preserves the card>row tree)
             with ui.row().classes("w-full items-center justify-between"):
@@ -249,83 +264,79 @@ async def detalle(periodo_id: int) -> None:
                 c["tipo_nombre"].lower(),
             )
         )
+        automotores = [c for c in capitas if c["categoria"] in _CATEGORIAS_AUTOMOTORES]
+        ramas = [c for c in capitas if c["categoria"] in _CATEGORIAS_RAMAS]
+        # Mismo ancho de tile en ambas filas: tantas columnas como el grupo más
+        # grande, así automotores y ramas quedan alineados en dos filas.
+        columnas = max(len(automotores), len(ramas), 1)
 
-        with ui.row().classes("w-full items-start gap-4"):
-            with ui.card().classes("flex-1 gap-3"):
-                with ui.row().classes("w-full items-center justify-between"):
-                    ui.label("Cápitas").classes("text-h6")
-                    ui.button(
-                        "Guardar cápitas",
-                        on_click=lambda: _guardar_capitas(periodo_id, widgets),
+        def _render_capita(c: dict) -> None:
+            color = CATEGORIA_COLORS.get(c["categoria"], "#64748B")
+            with ui.card().classes("gap-1"):
+                ui.element("div").classes("w-full").style(
+                    f"height: 3px; background-color: {color}; border-radius: 9999px;"
+                )
+                ui.label(c["tipo_nombre"]).classes("text-caption text-grey-7")
+                widgets[c["tipo_servicio_id"]] = (
+                    ui.number(
+                        value=c["capitas"] if c["capitas"] is not None else 0,
+                        min=0,
                     )
+                    .props("dense outlined")
+                    .classes("w-full")
+                )
 
-                # Leyenda de color por categoría (solo las presentes).
-                categorias_presentes = {c["categoria"] for c in capitas}
-                with ui.row().classes("items-center gap-3 flex-wrap"):
-                    for categoria in _CATEGORIA_ORDEN:
-                        if categoria not in categorias_presentes:
-                            continue
-                        color = CATEGORIA_COLORS.get(categoria, "#64748B")
-                        with ui.row().classes("items-center gap-1"):
-                            ui.icon("circle", size="xs").style(f"color: {color}")
-                            ui.label(
-                                _CATEGORIA_LABELS.get(categoria, categoria)
-                            ).classes("text-caption text-grey-7")
+        with ui.card().classes("w-full gap-3"):
+            with ui.row().classes("w-full items-center justify-between"):
+                ui.label("Cápitas").classes("text-h6")
+                ui.button(
+                    "Guardar cápitas",
+                    on_click=lambda: _guardar_capitas(periodo_id, widgets),
+                )
 
-                # Un único grid compacto: una tile por tipo con franja de color por
-                # categoría, en lugar de secciones apiladas que desperdician espacio.
-                with ui.grid(columns="repeat(auto-fill, minmax(180px, 1fr))").classes(
-                    "w-full gap-3"
-                ):
-                    for c in capitas:
-                        color = CATEGORIA_COLORS.get(c["categoria"], "#64748B")
-                        with ui.card().classes("gap-1"):
-                            ui.element("div").classes("w-full").style(
-                                f"height: 3px; background-color: {color};"
-                                " border-radius: 9999px;"
-                            )
-                            ui.label(c["tipo_nombre"]).classes(
-                                "text-caption text-grey-7"
-                            )
-                            widgets[c["tipo_servicio_id"]] = ui.number(
-                                value=c["capitas"] if c["capitas"] is not None else 0,
-                                min=0,
-                            ).classes("w-full")
+            # Dos filas: automotores arriba, ramas varias abajo.
+            if automotores:
+                with ui.grid(columns=columnas).classes("w-full gap-3"):
+                    for c in automotores:
+                        _render_capita(c)
+            if ramas:
+                with ui.grid(columns=columnas).classes("w-full gap-3"):
+                    for c in ramas:
+                        _render_capita(c)
 
-            # Import de servicios: al lado del bloque de cápitas (solo admin).
-            if es_admin:
-                with ui.card().classes("w-80 gap-2"):
-                    ui.label("Importar servicios").classes("text-h6")
-                    await _importar(periodo_id)
-
-        # --- Cierre -----------------------------------------------------------
+        # --- Cierre + importar servicios (misma fila) -------------------------
         with ui.card().classes("w-full gap-2"):
             ui.label("Cierre").classes("text-h6")
-            with ui.row().classes("gap-2"):
-                ui.button(
-                    "Generar cierre",
-                    on_click=lambda: open_cierre_dialog(periodo, regenerar=False),
-                )
-                ui.button(
-                    "Regenerar cierre",
-                    on_click=lambda: open_cierre_dialog(periodo, regenerar=True),
-                )
-                ui.button("Descargar Excel", on_click=lambda: _descargar_excel(periodo))
+            with ui.row().classes(
+                "w-full items-center justify-between gap-4 flex-wrap"
+            ):
+                with ui.row().classes("items-center gap-2"):
+                    ui.button(
+                        "Generar cierre",
+                        on_click=lambda: open_cierre_dialog(periodo, regenerar=False),
+                    )
+                    ui.button(
+                        "Regenerar cierre",
+                        on_click=lambda: open_cierre_dialog(periodo, regenerar=True),
+                    )
+                    ui.button(
+                        "Descargar Excel", on_click=lambda: _descargar_excel(periodo)
+                    )
+                # Import de servicios en la misma fila que los botones (admin).
+                if es_admin:
+                    with ui.row().classes("items-center gap-2"):
+                        ui.label("Importar servicios").classes(
+                            "text-caption text-grey-7"
+                        )
+                        await _importar(periodo_id)
 
         # --- Servicios (admin) ------------------------------------------------
         if es_admin:
             with ui.card().classes("w-full gap-3"):
                 ui.label("Servicios").classes("text-h6")
 
-                all_rows = await _load_servicios(periodo_id)
-
-                table = ui.table(
-                    rows=all_rows,
-                    columns=_SERVICIO_COLUMNS,
-                    pagination={"rowsPerPage": 15},
-                ).classes("w-full")
-
-                # Todos los filtros + acciones en una única fila horizontal.
+                # Todos los filtros + acciones en una única fila horizontal,
+                # arriba de la tabla (antes estaban debajo de la paginación).
                 with ui.row().classes("w-full items-center gap-2 flex-wrap"):
                     texto = ui.input(placeholder="Buscar por texto…").classes("w-56")
                     desde = ui.input(label="Desde").props('type="date"').classes("w-40")
@@ -333,27 +344,43 @@ async def detalle(periodo_id: int) -> None:
                     filtrar_btn = ui.button("Filtrar")
                     limpiar_btn = ui.button("Limpiar filtros").props("flat")
 
-                def _aplica_filtros() -> None:
-                    t = (texto.value or "").strip().lower()
-                    rows: list[dict] = []
-                    for r in all_rows:
-                        if t and not any(
-                            t in str(r[c] or "").lower() for c in _SERVICIO_TEXT_FIELDS
-                        ):
-                            continue
-                        if desde.value and r["fecha"] < desde.value:
-                            continue
-                        if hasta.value and r["fecha"] > hasta.value:
-                            continue
-                        rows.append(r)
-                    table.rows = rows
+                async def _fetch(page: int) -> None:
+                    filas, total = await _cargar_pagina(
+                        periodo_id,
+                        texto=(texto.value or "").strip() or None,
+                        desde=desde.value or None,
+                        hasta=hasta.value or None,
+                        page=page,
+                    )
+                    table.rows = filas
+                    table.pagination["page"] = page
+                    table.pagination["rowsNumber"] = total
                     table.update()
 
-                def _limpiar_filtros() -> None:
+                async def _on_pagination(e) -> None:
+                    await _fetch(int(e.value["page"]))
+
+                rows, total = await _cargar_pagina(periodo_id)
+
+                table = ui.table(
+                    rows=rows,
+                    columns=_SERVICIO_COLUMNS,
+                    pagination={
+                        "rowsPerPage": _SERVICIO_PAGE_SIZE,
+                        "page": 1,
+                        "rowsNumber": total,
+                    },
+                    on_pagination_change=_on_pagination,
+                ).classes("w-full")
+
+                async def _aplica_filtros() -> None:
+                    await _fetch(1)
+
+                async def _limpiar_filtros() -> None:
                     texto.value = ""
                     desde.value = None
                     hasta.value = None
-                    _aplica_filtros()
+                    await _fetch(1)
 
                 filtrar_btn.on_click(_aplica_filtros)
                 limpiar_btn.on_click(_limpiar_filtros)

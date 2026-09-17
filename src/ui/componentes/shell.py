@@ -14,8 +14,10 @@ from src.ui.session import (
     THEME_KEY,
     clear_current_user,
     ensure_theme,
+    get_current_tab,
     get_current_theme,
     is_admin,
+    set_current_tab,
 )
 
 
@@ -50,17 +52,43 @@ def _render_header(user: dict) -> None:
             ui.button("Salir", on_click=_logout)
 
 
+def _nav_tabs(user: dict) -> None:
+    """Draw the vertical drawer tabs (shared by the main page and subpages)."""
+    ui.tab("periodos", "Periodos", icon="calendar_month")
+    ui.tab("ts", "Tipos de servicio", icon="sell")
+    ui.tab("reportes", "Reportes", icon="insights")
+    if is_admin(user):
+        ui.tab("usuario", "Usuarios", icon="person")
+
+
 def render(user: dict) -> Tabs:
-    """Render header + drawer y devuelve el elemento ``ui.tabs``."""
+    """Render header + drawer and return the ``ui.tabs`` element (main page)."""
     _render_header(user)
 
     with (
         ui.left_drawer(value=True, fixed=True, bordered=True).classes("w-60"),
-        ui.tabs().props("vertical").classes("w-full") as tabs,
+        ui.tabs(value=get_current_tab()).props("vertical").classes("w-full") as tabs,
     ):
-        ui.tab("periodos", "Periodos", icon="calendar_month")
-        ui.tab("ts", "Tipos de servicio", icon="sell")
-        ui.tab("reportes", "Reportes", icon="insights")
-        if is_admin(user):
-            ui.tab("usuario", "Usuarios", icon="person")
+        _nav_tabs(user)
+    tabs.on_value_change(lambda e: set_current_tab(e.value))
     return tabs
+
+
+def render_subpage(user: dict, active: str = "periodos") -> None:
+    """Render header + drawer for a subpage; tabs navigate back to the main page.
+
+    Subpages (e.g. the period detail) live on their own route, so the drawer
+    can't switch tab panels locally: selecting a tab stores it and navigates to
+    ``/``, which restores it via ``get_current_tab``.
+    """
+    _render_header(user)
+
+    def _goto(e) -> None:
+        set_current_tab(e.value)
+        ui.navigate.to("/")
+
+    with (
+        ui.left_drawer(value=True, fixed=True, bordered=True).classes("w-60"),
+        ui.tabs(value=active, on_change=_goto).props("vertical").classes("w-full"),
+    ):
+        _nav_tabs(user)

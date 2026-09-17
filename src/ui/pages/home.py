@@ -24,6 +24,7 @@ from src.ui.pages import servicio as servicio_page  # noqa: F401
 from src.ui.pages import tipo_servicio as ts_page
 from src.ui.pages import usuario as usuario_page
 from src.ui.session import (
+    get_current_tab,
     get_current_user,
     is_admin,
     set_current_user,
@@ -67,7 +68,7 @@ async def _render_app(user: dict) -> None:
     # El shell dibuja header + drawer + tabs y devuelve el elemento de tabs.
     tabs = shell.render(user)
 
-    with ui.tab_panels(tabs, value="periodos").classes("w-full"):
+    with ui.tab_panels(tabs, value=get_current_tab()).classes("w-full"):
         with ui.tab_panel("periodos"):
             await periodos_page.render(user)
         with ui.tab_panel("ts"):

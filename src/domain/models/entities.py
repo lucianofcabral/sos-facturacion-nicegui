@@ -115,6 +115,15 @@ class Servicio(BaseModel):
     tipo_servicio: TipoServicio | None = None
 
 
+class PaginaServicios(BaseModel):
+    """Read model: una página de servicios + total filtrado (no persistido)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    rows: list[Servicio]
+    total: int
+
+
 class CapitaPeriodo(BaseModel):
     model_config = ConfigDict(frozen=True)
 

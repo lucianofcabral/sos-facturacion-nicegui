@@ -20,6 +20,7 @@ from src.domain.models.entities import (
     ConteoCategoriaPeriodo,
     ConteoProductor,
     MetricasTipoServicio,
+    PaginaServicios,
     Periodo,
     Servicio,
     TipoServicio,
@@ -112,6 +113,18 @@ class ServicioRepository(Repository[Servicio], Protocol):
     def reemplazar_por_periodo(
         self, periodo_id: int, servicios: list[Servicio]
     ) -> None: ...
+
+    def search(
+        self,
+        periodo_id: int,
+        texto: str | None = None,
+        desde: date | None = None,
+        hasta: date | None = None,
+        page: int = 1,
+        page_size: int = 15,
+    ) -> PaginaServicios:
+        """Return one filtered page of a period's services plus the total."""
+        ...
 
     def conteo_por_categoria_periodo(self) -> list[ConteoCategoriaPeriodo]:
         """Servicios agrupados por (anio, mes, categoria) en TODOS los periodos."""
