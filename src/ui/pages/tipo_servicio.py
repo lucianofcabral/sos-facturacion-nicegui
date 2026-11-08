@@ -43,6 +43,7 @@ async def _load() -> list[dict]:
                     "nombre": t.nombre,
                     "codigo": t.codigo,
                     "categoria": t.categoria.value,
+                    "es_alias": t.es_alias,
                     "servicios": m.servicios_asociados,
                     "ciclos": m.ciclos,
                     "primer": m.primer_ciclo,
@@ -61,6 +62,7 @@ def _initial(t: dict) -> dict:
         "nombre": t["nombre"],
         "codigo": t["codigo"],
         "categoria": t["categoria"],
+        "es_alias": t["es_alias"],
     }
 
 
@@ -83,6 +85,7 @@ async def _open_create() -> None:
                     nombre=values["nombre"],
                     codigo=values["codigo"],
                     categoria=values["categoria"],
+                    es_alias=values["es_alias"],
                 ),
             )
         ui.navigate.reload()
@@ -106,6 +109,7 @@ async def _open_edit(t: dict) -> None:
                     nombre=values["nombre"],
                     codigo=values["codigo"],
                     categoria=values["categoria"],
+                    es_alias=values["es_alias"],
                 ),
             )
         ui.navigate.reload()
@@ -134,12 +138,15 @@ def _render_card(container: ui.element, t: dict) -> None:
     categoria = t["categoria"]
     color = CATEGORIA_COLORS.get(categoria, "#64748B")
     etiqueta = _CATEGORIA_LABELS.get(categoria, categoria)
-    with ui.card().classes("w-full gap-2"):
+    with (container, ui.card().classes("w-full gap-2")):
         ui.element("div").classes("w-full").style(
             f"height: 4px; background-color: {color}; border-radius: 9999px;"
         )
         with ui.row().classes("w-full items-center justify-between"):
-            ui.label(t["nombre"]).classes("text-h6")
+            with ui.row().classes("items-center gap-1"):
+                ui.label(t["nombre"]).classes("text-h6")
+                if t["es_alias"]:
+                    ui.badge("Legacy", color="warning")
             ui.label(f"Código {t['codigo']}").classes("text-caption text-grey-7")
         with ui.row().classes("items-center gap-1"):
             ui.icon("circle", size="xs").style(f"color: {color}")

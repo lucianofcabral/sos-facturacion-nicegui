@@ -24,6 +24,7 @@ class EditTipoServicio(BaseModel):
     nombre: str | None = Field(default=None, max_length=50)
     codigo: str | None = Field(default=None, max_length=10)
     categoria: CategoriaServicio | None = None
+    es_alias: bool | None = None
 
 
 class EditAlicuota(BaseModel):

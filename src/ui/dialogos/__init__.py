@@ -1,7 +1,7 @@
 """Diálogo genérico de alta/edición basado en una lista de campos.
 
 Cada campo es un dict con:
-  key, label, type ("text"|"number"|"password"|"select"|"date")
+  key, label, type ("text"|"number"|"password"|"select"|"date"|"bool")
   type=="number": coerce ("int"|"float"), min, max, step
   type=="select": options -> lista fija, o callable (sync/async) que devuelve [(valor, etiqueta), ...]
 """
@@ -79,6 +79,11 @@ async def open_form_dialog(
                 widgets[fk] = ui.input(
                     label=label, password=True, password_toggle_button=True
                 )
+            elif ftype == "bool":
+                chk = ui.checkbox(label)
+                if fk in initial:
+                    chk.value = bool(initial[fk])
+                widgets[fk] = chk
             else:
                 inp = ui.input(label=label)
                 if fk in initial:

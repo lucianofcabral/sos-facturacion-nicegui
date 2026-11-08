@@ -126,3 +126,21 @@ def test_editar_tipo_servicio_preserva_es_alias():
             assert leido.es_alias is True
 
     run_test(main)
+
+
+def test_editar_tipo_servicio_cambia_es_alias():
+    async def main():
+        async with PostgresUoW() as uow:
+            ts = await tipo_servicio.crear_tipo_servicio(
+                uow,
+                CreateTipoServicio(
+                    rama="Automotores", nombre="Básico", codigo="659", categoria="basico"
+                ),
+            )
+            assert ts.es_alias is False
+            editado = await tipo_servicio.editar_tipo_servicio(
+                uow, ts.id, EditTipoServicio(es_alias=True)
+            )
+            assert editado.es_alias is True
+
+    run_test(main)

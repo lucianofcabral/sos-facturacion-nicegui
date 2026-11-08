@@ -11,7 +11,11 @@ async def crear_tipo_servicio(
     uow: UnitOfWorkPort, dto: CreateTipoServicio
 ) -> TipoServicio:
     entity = TipoServicio(
-        rama=dto.rama, nombre=dto.nombre, codigo=dto.codigo, categoria=dto.categoria
+        rama=dto.rama,
+        nombre=dto.nombre,
+        codigo=dto.codigo,
+        categoria=dto.categoria,
+        es_alias=dto.es_alias,
     )
     creado = await uow.tipos_servicio.add(entity)
     await uow.commit()
@@ -38,7 +42,7 @@ async def editar_tipo_servicio(
         nombre=dto.nombre if dto.nombre is not None else existente.nombre,
         codigo=dto.codigo if dto.codigo is not None else existente.codigo,
         categoria=dto.categoria if dto.categoria is not None else existente.categoria,
-        es_alias=existente.es_alias,
+        es_alias=dto.es_alias if dto.es_alias is not None else existente.es_alias,
     )
     resultado = await uow.tipos_servicio.update(actualizado)
     await uow.commit()

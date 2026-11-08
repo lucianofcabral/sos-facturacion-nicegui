@@ -21,6 +21,7 @@ TIPO_SERVICIO_FIELDS = [
         "type": "select",
         "options": CATEGORIA_OPTS,
     },
+    {"key": "es_alias", "label": "Es alias (código legado)", "type": "bool"},
 ]
 
 
