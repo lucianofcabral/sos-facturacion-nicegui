@@ -36,3 +36,6 @@ series), cápitas y coeficientes. Reemplaza la tabla "servicios por periodo" y e
 - L2: Elección de dirección: "El 1" → Dashboard operativo.
 - L3: Implementado en `df88d67` (feat/reportes-dashboard): T1–T4 completas,
   202 tests en verde. Verificación visual pendiente del usuario en la app local.
+- L4: Review nativa (2 lenses) escaló con hallazgo CRÍTICO R3-001 (filtro de año
+  eliminado → regresión). Arreglado en `1ecccea`: se restauró el selector de año
+  y se corrigió el docstring del port `conteo_por_tipo`. 202 tests en verde.
