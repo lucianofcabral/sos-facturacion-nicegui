@@ -290,17 +290,24 @@ async def _load():
 
 async def render(_user: dict) -> None:
     resumen = await _load()
-    cuadros = _cuadros(resumen.periodos)[-_MESES_SERIE:]
+    cuadros_todos = _cuadros(resumen.periodos)
     periodo_mas, total_mas = _periodo_con_mas_servicios(resumen.conteos_categoria)
 
-    # KPI: coef de uso y total a pagar del último cierre oficial.
+    # KPI: coef de uso y total a pagar del último cierre oficial (global).
     coef_uso = "—"
     total_pagar = "—"
-    if cuadros:
-        ultimo = cuadros[-1].cuadro
+    if cuadros_todos:
+        ultimo = cuadros_todos[-1].cuadro
         coef = _to_float(ultimo.get("coef_uso"))
         coef_uso = f"{coef:.4f}" if coef is not None else "—"
         total_pagar = format_ars(_to_float(ultimo.get("total_a_pagar")))
+
+    anios = sorted({p.anio for p in resumen.periodos}, reverse=True)
+    opciones_anio = {"Todos": None} | {str(a): a for a in anios}
+
+    def _cuadros_de_anio(anio):
+        filtrados = [c for c in cuadros_todos if anio is None or c.anio == anio]
+        return filtrados[-_MESES_SERIE:]
 
     with ui.column().classes("w-full gap-4"):
         ui.label("Reportes").classes("text-h5")
@@ -312,6 +319,10 @@ async def render(_user: dict) -> None:
             _kpi("Coef. uso último cierre", coef_uso)
             _kpi("Total a pagar último cierre", total_pagar)
 
+        selector_anio = ui.select(opciones_anio, value=None, label="Año").props(
+            "clearable"
+        )
+
         with ui.grid(columns=2).classes("w-full gap-4"):
             with ui.card().classes("w-full"):
                 ui.label("Servicios por tipo de servicio").classes("text-h6")
@@ -321,7 +332,7 @@ async def render(_user: dict) -> None:
 
             with ui.card().classes("w-full"):
                 ui.label("Servicios por periodo").classes("text-h6")
-                ui.echart(
+                chart_periodo = ui.echart(
                     _opciones_servicios_periodo(resumen.conteos_categoria)
                 ).classes("w-full h-72")
 
@@ -334,20 +345,45 @@ async def render(_user: dict) -> None:
                         label="Tipo de servicio",
                     ).props("dense")
                 chart_valor = ui.echart(
-                    _opciones_valor_aumento(cuadros, "basico")
+                    _opciones_valor_aumento(cuadros_todos[-_MESES_SERIE:], "basico")
                 ).classes("w-full h-80")
 
             with ui.card().classes("w-full"):
                 ui.label("Cápitas por tipo de servicio").classes("text-h6")
-                ui.echart(_opciones_capitas(cuadros)).classes("w-full h-72")
+                chart_capitas = ui.echart(
+                    _opciones_capitas(cuadros_todos[-_MESES_SERIE:])
+                ).classes("w-full h-72")
 
             with ui.card().classes("w-full"):
                 ui.label("Coeficiente de uso").classes("text-h6")
-                ui.echart(_opciones_coeficientes(cuadros)).classes("w-full h-72")
+                chart_coef = ui.echart(
+                    _opciones_coeficientes(cuadros_todos[-_MESES_SERIE:])
+                ).classes("w-full h-72")
 
-        def _cambiar_tipo() -> None:
+        def _aplicar_filtro() -> None:
+            anio = selector_anio.value
+            conteos_filtrados = [
+                c for c in resumen.conteos_categoria if anio is None or c.anio == anio
+            ]
+            cuadros_filtrados = _cuadros_de_anio(anio)
+            chart_periodo.run_chart_method(
+                "setOption", _opciones_servicios_periodo(conteos_filtrados)
+            )
             chart_valor.run_chart_method(
-                "setOption", _opciones_valor_aumento(cuadros, selector_tipo.value)
+                "setOption", _opciones_valor_aumento(cuadros_filtrados, selector_tipo.value)
+            )
+            chart_capitas.run_chart_method(
+                "setOption", _opciones_capitas(cuadros_filtrados)
+            )
+            chart_coef.run_chart_method(
+                "setOption", _opciones_coeficientes(cuadros_filtrados)
             )
 
+        def _cambiar_tipo() -> None:
+            cuadros_filtrados = _cuadros_de_anio(selector_anio.value)
+            chart_valor.run_chart_method(
+                "setOption", _opciones_valor_aumento(cuadros_filtrados, selector_tipo.value)
+            )
+
+        selector_anio.on("update:model-value", _aplicar_filtro)
         selector_tipo.on("update:model-value", _cambiar_tipo)
