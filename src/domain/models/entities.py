@@ -63,6 +63,19 @@ class ConteoCategoriaPeriodo(BaseModel):
     total: int
 
 
+class ConteoTipoServicio(BaseModel):
+    """Read model: cantidad de servicios por tipo de servicio (not persisted)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    tipo_servicio_id: int
+    codigo: str
+    nombre: str
+    categoria: CategoriaServicio
+    es_alias: bool = False
+    total: int
+
+
 class ConteoProductor(BaseModel):
     """Read model: cantidad de servicios por productor (cod_productor)."""
 
@@ -86,6 +99,25 @@ class ResumenReportes(BaseModel):
     total_servicios: int
     periodos_con_servicios: int
     productores_distintos: int
+    tipos_distintos: int
+
+
+class ResumenDashboard(BaseModel):
+    """Read model agregado para el dashboard de Reportes (no persistido).
+
+    ``conteos_categoria`` (servicios por periodo), ``conteos_tipo`` (servicios
+    por tipo de servicio) y ``periodos`` (con su ``cuadro`` de cierre: aumento,
+    capitas, servicios, coeficientes, valores y total) alimentan los gráficos;
+    los KPIs escalares se derivan en Python en el use case.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    conteos_categoria: list[ConteoCategoriaPeriodo]
+    conteos_tipo: list[ConteoTipoServicio]
+    periodos: list[PeriodoConEstado]
+    total_servicios: int
+    periodos_con_servicios: int
     tipos_distintos: int
 
 

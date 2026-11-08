@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reportes — Dashboard operativo</title>
+<style>
+  :root {
+    --bg: #121212; --card: #1E1E1E; --border: rgba(255,255,255,0.12);
+    --text: #E5E7EB; --muted: #9CA3AF; --faint: #6B7280;
+    --red: #DC2626; --red-700: #B91C1C; --red-900: #7F1D1D;
+    --red-500: #EF4444; --red-400: #F87171; --red-300: #FCA5A5;
+    --amber: #F59E0B;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.45;
+  }
+  .shell { max-width: 1440px; margin: 0 auto; padding: 24px 28px 48px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+  h1 { font-size: 20px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  .subtitle { color: var(--muted); font-size: 13px; }
+  select {
+    background: var(--card); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; font-size: 13px;
+  }
+  select:focus { outline: 2px solid var(--red); outline-offset: 1px; }
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .kpi .label { font-size: 12px; color: var(--muted); }
+  .kpi .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .kpi .delta { font-size: 12px; margin-top: 2px; color: var(--faint); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .panel.full { grid-column: 1 / -1; }
+  .panel h2 { font-size: 14px; margin: 0 0 4px; font-weight: 600; }
+  .panel .hint { font-size: 12px; color: var(--faint); margin: 0 0 12px; }
+  svg { display: block; width: 100%; height: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .axis-label { fill: var(--faint); font-size: 10px; }
+  @media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <h1>Reportes</h1>
+      <span class="subtitle">Visión operativa de servicios, valores, cápitas y coeficientes</span>
+    </div>
+    <div>
+      <label for="anio" class="subtitle" style="margin-right:6px">Año</label>
+      <select id="anio" aria-label="Filtrar por año">
+        <option>Todos</option>
+        <option>2025</option>
+        <option selected>2024</option>
+        <option>2023</option>
+      </select>
+    </div>
+  </header>
+
+  <section class="kpis" aria-label="Indicadores">
+    <div class="kpi"><div class="label">Total servicios</div><div class="value">8.589</div><div class="delta">+312 vs mes anterior</div></div>
+    <div class="kpi"><div class="label">Periodo con más servicios</div><div class="value">Oct 2025</div><div class="delta">398 servicios</div></div>
+    <div class="kpi"><div class="label">Tipos de servicio</div><div class="value">7</div><div class="delta">3 automotores + 3 ramas + 1 legado</div></div>
+    <div class="kpi"><div class="label">Coef. uso último cierre</div><div class="value">0.7318</div><div class="delta">índice 0.75</div></div>
+    <div class="kpi"><div class="label">Total a pagar (Oct 2025)</div><div class="value">$ 3,14 M</div><div class="delta">+55% por cápitas 61</div></div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <h2>Servicios por tipo de servicio</h2>
+      <p class="hint">Cantidad de servicios por tipo (acumulado en el periodo seleccionado)</p>
+      <svg viewBox="0 0 560 220" role="img" aria-label="Barras de servicios por tipo">
+        <g class="axis-label">
+          <text x="0" y="205">0</text><text x="0" y="145">2.000</text><text x="0" y="85">4.000</text>
+        </g>
+        <line x1="24" y1="198" x2="552" y2="198" stroke="#374151" stroke-width="1"/>
+        <line x1="24" y1="138" x2="552" y2="138" stroke="#262626" stroke-width="1"/>
+        <line x1="24" y1="78" x2="552" y2="78" stroke="#262626" stroke-width="1"/>
+        <!-- valores: 659=5120, 660=3100, 658=910, 61=189, ramas ~60 -->
+        <rect x="40"  y="30" width="52" height="168" fill="#DC2626" rx="3"><title>Básico 659 — 5.120</title></rect>
+        <text x="66"  y="20" text-anchor="middle" fill="#E5E7EB" font-size="11">5.120</text>
+        <text x="66"  y="212" text-anchor="middle" fill="#9CA3AF" font-size="11">Básico 659</text>
+        <rect x="120" y="102" width="52" height="96" fill="#B91C1C" rx="3"><title>Completo 660 — 3.100</title></rect>
+        <text x="146" y="92" text-anchor="middle" fill="#E5E7EB" font-size="11">3.100</text>
+        <text x="146" y="212" text-anchor="middle" fill="#9CA3AF" font-size="11">Completo 660</text>
+        <rect x="200" y="168" width="52" height="30" fill="#7F1D1D" rx="3"><title>VIP 658 — 910</title></rect>
+        <text x="226" y="158" text-anchor="middle" fill="#E5E7EB" font-size="11">910</text>
+        <text x="226" y="212" text-anchor="middle" fill="#9CA3AF" font-size="11">VIP 658</text>
+        <rect x="280" y="192" width="52" height="6" fill="#EF4444" rx="2"><title>Rama 87 — 60</title></rect>
+        <text x="306" y="184" text-anchor="middle" fill="#E5E7EB" font-size="11">60</text>
+        <text x="306" y="212" text-anchor="middle" fill="#9CA3AF" font-size="11">Rama 87</text>
+        <rect x="360" y="193" width="52" height="5" fill="#F87171" rx="2"><title>Rama 89 — 48</title></rect>
+        <text x="386" y="185" text-anchor="middle" fill="#E5E7EB" font-size="11">48</text>
+        <text x="386" y="212" text-anchor="middle" fill="#9CA3AF" font-size="11">Rama 89</text>
+        <rect x="440" y="194" width="52" height="4" fill="#FCA5A5" rx="2"><title>Rama 90 — 40</title></rect>
+        <text x="466" y="186" text-anchor="middle" fill="#E5E7EB" font-size="11">40</text>
+        <text x="466" y="212" text-anchor="middle" fill="#9CA3AF" font-size="11">Rama 90</text>
+      </svg>
+      <div class="legend">
+        <span><i class="dot" style="background:#DC2626"></i>Básico 659</span>
+        <span><i class="dot" style="background:#B91C1C"></i>Completo 660</span>
+        <span><i class="dot" style="background:#7F1D1D"></i>VIP 658</span>
+        <span><i class="dot" style="background:#EF4444"></i>Ramas 87/89/90</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Servicios por periodo</h2>
+      <p class="hint">Evolución mensual de servicios (últimos 12 meses)</p>
+      <svg viewBox="0 0 560 220" role="img" aria-label="Línea de servicios por mes">
+        <polyline fill="none" stroke="#DC2626" stroke-width="2.5"
+          points="20,150 68,140 116,132 164,120 212,128 260,118 308,110 356,100 404,90 452,78 500,70 548,60"/>
+        <g fill="#EF4444">
+          <circle cx="20" cy="150" r="3.5"/><circle cx="68" cy="140" r="3.5"/><circle cx="116" cy="132" r="3.5"/>
+          <circle cx="164" cy="120" r="3.5"/><circle cx="212" cy="128" r="3.5"/><circle cx="260" cy="118" r="3.5"/>
+          <circle cx="308" cy="110" r="3.5"/><circle cx="356" cy="100" r="3.5"/><circle cx="404" cy="90" r="3.5"/>
+          <circle cx="452" cy="78" r="3.5"/><circle cx="500" cy="70" r="3.5"/><circle cx="548" cy="60" r="3.5"/>
+        </g>
+        <g class="axis-label" text-anchor="middle">
+          <text x="20" y="212">Ene</text><text x="116" y="212">Mar</text><text x="212" y="212">May</text>
+          <text x="308" y="212">Jul</text><text x="404" y="212">Sep</text><text x="500" y="212">Nov</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="panel full">
+      <h2>Valor de alícuota + aumento aplicado</h2>
+      <p class="hint">Serie de valor del tipo Básico (línea, eje izquierdo) y aumento % por periodo (barras, eje derecho)</p>
+      <svg viewBox="0 0 1100 260" role="img" aria-label="Valor y aumento por periodo">
+        <g class="axis-label" text-anchor="end">
+          <text x="46" y="40">$ 5.200</text><text x="46" y="90">$ 4.900</text>
+          <text x="46" y="140">$ 4.600</text><text x="46" y="190">$ 4.300</text><text x="46" y="240">$ 4.000</text>
+        </g>
+        <line x1="52" y1="35" x2="52" y2="240" stroke="#374151"/>
+        <!-- barras de aumento (eje derecho, máx ~12% => 40px por punto sobre base 210) -->
+        <g fill="#DC2626" opacity="0.28">
+          <rect x="72"  y="210" width="26" height="0"  rx="2"/><rect x="142" y="210" width="26" height="0"  rx="2"/>
+          <rect x="212" y="210" width="26" height="0"  rx="2"/><rect x="282" y="210" width="26" height="0"  rx="2"/>
+          <rect x="352" y="184" width="26" height="26" rx="2" title="+6%"/><rect x="422" y="210" width="26" height="0" rx="2"/>
+          <rect x="492" y="210" width="26" height="0" rx="2"/><rect x="562" y="184" width="26" height="26" rx="2" title="+6%"/>
+          <rect x="632" y="210" width="26" height="0" rx="2"/><rect x="702" y="158" width="26" height="52" rx="2" title="+12%"/>
+          <rect x="772" y="210" width="26" height="0" rx="2"/><rect x="842" y="210" width="26" height="0" rx="2"/>
+        </g>
+        <!-- línea de valor -->
+        <polyline fill="none" stroke="#F59E0B" stroke-width="2.5"
+          points="85,185 155,185 225,185 295,185 365,168 435,168 505,168 575,151 645,151 715,131 785,131 855,131"/>
+        <g fill="#F59E0B">
+          <circle cx="85" cy="185" r="3.5"/><circle cx="295" cy="185" r="3.5"/><circle cx="365" cy="168" r="3.5"/>
+          <circle cx="575" cy="151" r="3.5"/><circle cx="715" cy="131" r="3.5"/>
+        </g>
+        <g class="axis-label" text-anchor="middle" fill="#E5E7EB">
+          <text x="85" y="258">Ene</text><text x="225" y="258">Mar</text><text x="365" y="258">May</text>
+          <text x="505" y="258">Jul</text><text x="645" y="258">Sep</text><text x="785" y="258">Nov</text>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i class="dot" style="background:#F59E0B"></i>Valor alícuota (ARS)</span>
+        <span><i class="dot" style="background:#DC2626"></i>Aumento % por periodo</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Cápitas por tipo de servicio</h2>
+      <p class="hint">Cápitas del último periodo, apiladas por categoría</p>
+      <svg viewBox="0 0 560 220" role="img" aria-label="Cápitas apiladas">
+        <g class="axis-label" text-anchor="end">
+          <text x="46" y="46">1.000</text><text x="46" y="96">500</text><text x="46" y="146">250</text><text x="46" y="198">0</text>
+        </g>
+        <line x1="52" y1="40" x2="552" y2="40" stroke="#262626"/>
+        <line x1="52" y1="90" x2="552" y2="90" stroke="#262626"/>
+        <line x1="52" y1="140" x2="552" y2="140" stroke="#262626"/>
+        <line x1="52" y1="190" x2="552" y2="190" stroke="#374151"/>
+        <!-- stacked por periodo (12 meses): basico abajo, completo, vip, ramas -->
+        <g>
+          <rect x="70" y="150" width="30" height="40" fill="#DC2626"/><rect x="70" y="120" width="30" height="30" fill="#B91C1C"/><rect x="70" y="105" width="30" height="15" fill="#7F1D1D"/><rect x="70" y="85" width="30" height="20" fill="#FCA5A5"/>
+          <rect x="110" y="148" width="30" height="42" fill="#DC2626"/><rect x="110" y="119" width="30" height="29" fill="#B91C1C"/><rect x="110" y="105" width="30" height="14" fill="#7F1D1D"/><rect x="110" y="84" width="30" height="21" fill="#FCA5A5"/>
+          <rect x="150" y="146" width="30" height="44" fill="#DC2626"/><rect x="150" y="118" width="30" height="28" fill="#B91C1C"/><rect x="150" y="104" width="30" height="14" fill="#7F1D1D"/><rect x="150" y="83" width="30" height="21" fill="#FCA5A5"/>
+          <rect x="190" y="144" width="30" height="46" fill="#DC2626"/><rect x="190" y="116" width="30" height="28" fill="#B91C1C"/><rect x="190" y="103" width="30" height="13" fill="#7F1D1D"/><rect x="190" y="82" width="30" height="21" fill="#FCA5A5"/>
+          <rect x="230" y="142" width="30" height="48" fill="#DC2626"/><rect x="230" y="115" width="30" height="27" fill="#B91C1C"/><rect x="230" y="102" width="30" height="13" fill="#7F1D1D"/><rect x="230" y="81" width="30" height="21" fill="#FCA5A5"/>
+          <rect x="270" y="140" width="30" height="50" fill="#DC2626"/><rect x="270" y="113" width="30" height="27" fill="#B91C1C"/><rect x="270" y="101" width="30" height="12" fill="#7F1D1D"/><rect x="270" y="80" width="30" height="21" fill="#FCA5A5"/>
+          <rect x="310" y="138" width="30" height="52" fill="#DC2626"/><rect x="310" y="111" width="30" height="27" fill="#B91C1C"/><rect x="310" y="100" width="30" height="11" fill="#7F1D1D"/><rect x="310" y="79" width="30" height="21" fill="#FCA5A5"/>
+          <rect x="350" y="136" width="30" height="54" fill="#DC2626"/><rect x="350" y="109" width="30" height="27" fill="#B91C1C"/><rect x="350" y="99" width="30" height="10" fill="#7F1D1D"/><rect x="350" y="78" width="30" height="21" fill="#FCA5A5"/>
+          <rect x="390" y="134" width="30" height="56" fill="#DC2626"/><rect x="390" y="107" width="30" height="27" fill="#B91C1C"/><rect x="390" y="97" width="30" height="10" fill="#7F1D1D"/><rect x="390" y="76" width="30" height="21" fill="#FCA5A5"/>
+          <rect x="430" y="132" width="30" height="58" fill="#DC2626"/><rect x="430" y="105" width="30" height="27" fill="#B91C1C"/><rect x="430" y="96" width="30" height="9" fill="#7F1D1D"/><rect x="430" y="75" width="30" height="21" fill="#FCA5A5"/>
+          <rect x="470" y="130" width="30" height="60" fill="#DC2626"/><rect x="470" y="103" width="30" height="27" fill="#B91C1C"/><rect x="470" y="94" width="30" height="9" fill="#7F1D1D"/><rect x="470" y="73" width="30" height="21" fill="#FCA5A5"/>
+          <rect x="510" y="128" width="30" height="62" fill="#DC2626"/><rect x="510" y="101" width="30" height="27" fill="#B91C1C"/><rect x="510" y="93" width="30" height="8" fill="#7F1D1D"/><rect x="510" y="72" width="30" height="21" fill="#FCA5A5"/>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i class="dot" style="background:#DC2626"></i>Básico</span>
+        <span><i class="dot" style="background:#B91C1C"></i>Completo</span>
+        <span><i class="dot" style="background:#7F1D1D"></i>VIP</span>
+        <span><i class="dot" style="background:#FCA5A5"></i>Ramas</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Coeficiente de uso</h2>
+      <p class="hint">coef_uso (servicios/cápitas) vs coef_indice por periodo</p>
+      <svg viewBox="0 0 560 220" role="img" aria-label="Coeficientes por periodo">
+        <polyline fill="none" stroke="#DC2626" stroke-width="2.5"
+          points="20,60 68,70 116,64 164,58 212,66 260,72 308,60 356,54 404,62 452,68 500,58 548,50"/>
+        <polyline fill="none" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="5 4"
+          points="20,90 68,90 116,90 164,90 212,90 260,90 308,90 356,90 404,90 452,90 500,90 548,90"/>
+        <g class="axis-label" text-anchor="middle">
+          <text x="20" y="212">Ene</text><text x="116" y="212">Mar</text><text x="212" y="212">May</text>
+          <text x="308" y="212">Jul</text><text x="404" y="212">Sep</text><text x="500" y="212">Nov</text>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i class="dot" style="background:#DC2626"></i>coef_uso</span>
+        <span><i class="dot" style="background:#9CA3AF"></i>coef_indice (referencia)</span>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

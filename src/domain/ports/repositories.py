@@ -19,6 +19,7 @@ from src.domain.models.entities import (
     Cierre,
     ConteoCategoriaPeriodo,
     ConteoProductor,
+    ConteoTipoServicio,
     MetricasTipoServicio,
     PaginaServicios,
     Periodo,
@@ -128,6 +129,10 @@ class ServicioRepository(Repository[Servicio], Protocol):
 
     def conteo_por_categoria_periodo(self) -> list[ConteoCategoriaPeriodo]:
         """Servicios agrupados por (anio, mes, categoria) en TODOS los periodos."""
+        ...
+
+    def conteo_por_tipo(self) -> list[ConteoTipoServicio]:
+        """Servicios agrupados por tipo (codigo, nombre, categoria, es_alias)."""
         ...
 
     def top_productores(self, limite: int = 10) -> list[ConteoProductor]:
