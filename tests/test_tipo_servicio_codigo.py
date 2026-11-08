@@ -13,6 +13,7 @@ from conftest import run_test
 from src.application.use_cases import tipo_servicio
 from src.domain.dto.create import CreateTipoServicio
 from src.domain.dto.edit import EditTipoServicio
+from src.domain.models.entities import TipoServicio
 from src.infrastructure.adapters.uow import PostgresUoW
 
 
@@ -102,3 +103,26 @@ def test_categoria_invalida_rechazada():
 
     with pytest.raises(ValidationError):
         CreateTipoServicio(rama="Automotores", nombre="Básico", codigo="659", categoria="desconocida")
+
+
+def test_editar_tipo_servicio_preserva_es_alias():
+    async def main():
+        async with PostgresUoW() as uow:
+            alias = await uow.tipos_servicio.add(
+                TipoServicio(
+                    rama="Automotores",
+                    nombre="Básico 61",
+                    codigo="61",
+                    categoria="basico",
+                    es_alias=True,
+                )
+            )
+            assert alias.id is not None
+            editado = await tipo_servicio.editar_tipo_servicio(
+                uow, alias.id, EditTipoServicio(nombre="Básico 61 (viejo)")
+            )
+            assert editado.es_alias is True
+            leido = await uow.tipos_servicio.get(alias.id)
+            assert leido.es_alias is True
+
+    run_test(main)

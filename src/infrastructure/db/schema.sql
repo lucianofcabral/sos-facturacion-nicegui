@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS tipo_servicio (
     rama   VARCHAR(25) NOT NULL,
     nombre CITEXT NOT NULL CHECK (char_length(nombre) <= 50),
     codigo VARCHAR(10) NOT NULL UNIQUE,
-    categoria categoria_servicio NOT NULL
+    categoria categoria_servicio NOT NULL,
+    es_alias BOOLEAN NOT NULL DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS idx_tipo_servicio_rama ON tipo_servicio (rama);
 CREATE INDEX IF NOT EXISTS idx_periodo_nombre ON tipo_servicio (nombre);

@@ -38,6 +38,7 @@ async def editar_tipo_servicio(
         nombre=dto.nombre if dto.nombre is not None else existente.nombre,
         codigo=dto.codigo if dto.codigo is not None else existente.codigo,
         categoria=dto.categoria if dto.categoria is not None else existente.categoria,
+        es_alias=existente.es_alias,
     )
     resultado = await uow.tipos_servicio.update(actualizado)
     await uow.commit()

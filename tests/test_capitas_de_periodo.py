@@ -9,6 +9,7 @@ from src.domain.dto.create import (
     CreatePeriodo,
     CreateTipoServicio,
 )
+from src.domain.models.entities import TipoServicio
 from src.infrastructure.adapters.uow import PostgresUoW
 
 
@@ -37,7 +38,9 @@ def test_listar_capitas_de_periodo_con_y_sin_fila():
             p, t1, t2 = await _base(uow)
             await capita_periodo.crear_capita_periodo(
                 uow,
-                CreateCapitaPeriodo(periodo_id=p.id, tipo_servicio_id=t1.id, capitas=10),
+                CreateCapitaPeriodo(
+                    periodo_id=p.id, tipo_servicio_id=t1.id, capitas=10
+                ),
             )
             items = await capita_periodo.listar_capitas_de_periodo(uow, p.id)
             by_tipo = {i.tipo_servicio_id: i for i in items}
@@ -56,5 +59,37 @@ def test_listar_capitas_de_periodo_sin_capitas_todas_none():
             items = await capita_periodo.listar_capitas_de_periodo(uow, p.id)
             assert len(items) == 2
             assert all(i.capitas is None for i in items)
+
+    run_test(main)
+
+
+def test_listar_capitas_de_periodo_excluye_tipos_alias():
+    """Un tipo alias (p.ej. el código legado 61) no genera card de cápitas."""
+
+    async def main():
+        async with PostgresUoW() as uow:
+            p, t1, t2 = await _base(uow)
+            alias = await uow.tipos_servicio.add(
+                TipoServicio(
+                    rama="Automotores",
+                    nombre="Básico 61",
+                    codigo="61",
+                    categoria="basico",
+                    es_alias=True,
+                )
+            )
+            assert alias.id is not None
+            await capita_periodo.crear_capita_periodo(
+                uow,
+                CreateCapitaPeriodo(
+                    periodo_id=p.id, tipo_servicio_id=alias.id, capitas=189
+                ),
+            )
+
+            items = await capita_periodo.listar_capitas_de_periodo(uow, p.id)
+            by_tipo = {i.tipo_servicio_id: i for i in items}
+
+            assert alias.id not in by_tipo
+            assert set(by_tipo) == {t1.id, t2.id}
 
     run_test(main)

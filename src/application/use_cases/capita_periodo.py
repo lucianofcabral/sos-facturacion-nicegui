@@ -38,7 +38,7 @@ async def listar_capitas_de_periodo(
             capitas=cap_by_tipo.get(t.id),
         )
         for t in tipos
-        if t.id is not None
+        if t.id is not None and not t.es_alias
     ]
 
 

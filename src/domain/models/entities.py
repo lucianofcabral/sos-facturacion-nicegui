@@ -38,6 +38,7 @@ class TipoServicio(BaseModel):
     nombre: str = Field(..., max_length=50)
     codigo: str = Field(..., max_length=10)
     categoria: CategoriaServicio = Field(...)
+    es_alias: bool = False
 
 
 class MetricasTipoServicio(BaseModel):
