@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reportes — Foco por tipo de servicio</title>
+<style>
+  :root {
+    --bg: #121212; --card: #1E1E1E; --border: rgba(255,255,255,0.12);
+    --text: #E5E7EB; --muted: #9CA3AF; --faint: #6B7280;
+    --red: #DC2626; --amber: #F59E0B;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.45;
+  }
+  .shell { max-width: 1440px; margin: 0 auto; padding: 24px 28px 48px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+  h1 { font-size: 20px; margin: 0; font-weight: 650; }
+  .subtitle { color: var(--muted); font-size: 13px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  button.pill {
+    background: var(--card); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 999px; padding: 8px 16px; font-size: 13px; cursor: pointer;
+  }
+  button.pill:hover { border-color: var(--red); }
+  button.pill[aria-selected="true"] { background: var(--red); color: #fff; border-color: var(--red); font-weight: 600; }
+  button:focus { outline: 2px solid var(--red); outline-offset: 2px; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .kpi .label { font-size: 12px; color: var(--muted); }
+  .kpi .value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .kpi .delta { font-size: 12px; margin-top: 2px; color: var(--faint); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .panel.full { grid-column: 1 / -1; }
+  .panel h2 { font-size: 14px; margin: 0 0 4px; font-weight: 600; }
+  .panel .hint { font-size: 12px; color: var(--faint); margin: 0 0 12px; }
+  svg { display: block; width: 100%; height: auto; }
+  .legend { display: flex; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .axis-label { fill: var(--faint); font-size: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  @media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <h1>Reportes</h1>
+      <span class="subtitle">Análisis por tipo de servicio</span>
+    </div>
+  </header>
+
+  <nav class="pills" aria-label="Tipo de servicio">
+    <button class="pill" aria-selected="true">Básico 659</button>
+    <button class="pill" aria-selected="false">Completo 660</button>
+    <button class="pill" aria-selected="false">VIP 658</button>
+    <button class="pill" aria-selected="false">Rama 87</button>
+    <button class="pill" aria-selected="false">Rama 89</button>
+    <button class="pill" aria-selected="false">Rama 90</button>
+  </nav>
+
+  <section class="kpis" aria-label="Indicadores del tipo">
+    <div class="kpi"><div class="label">Servicios</div><div class="value">5.120</div><div class="delta">58% del total</div></div>
+    <div class="kpi"><div class="label">Cápitas actuales</div><div class="value">293</div><div class="delta">+2 vs mes anterior</div></div>
+    <div class="kpi"><div class="label">Valor alícuota</div><div class="value">$ 5.052</div><div class="delta">+6% en Oct 2025</div></div>
+    <div class="kpi"><div class="label">Coef. uso</div><div class="value">0.7318</div><div class="delta">índice 0.75</div></div>
+  </section>
+
+  <section class="grid">
+    <div class="panel full">
+      <h2>Valor de alícuota + aumento aplicado — Básico 659</h2>
+      <p class="hint">Valor (línea, eje izquierdo) y aumento % (barras, eje derecho)</p>
+      <svg viewBox="0 0 1100 260" role="img" aria-label="Valor y aumento del tipo Básico">
+        <g class="axis-label" text-anchor="end">
+          <text x="46" y="40">$ 5.200</text><text x="46" y="90">$ 4.900</text>
+          <text x="46" y="140">$ 4.600</text><text x="46" y="190">$ 4.300</text><text x="46" y="240">$ 4.000</text>
+        </g>
+        <line x1="52" y1="35" x2="52" y2="240" stroke="#374151"/>
+        <g fill="#DC2626" opacity="0.28">
+          <rect x="72" y="210" width="26" height="0" rx="2"/><rect x="142" y="210" width="26" height="0" rx="2"/>
+          <rect x="212" y="210" width="26" height="0" rx="2"/><rect x="282" y="210" width="26" height="0" rx="2"/>
+          <rect x="352" y="184" width="26" height="26" rx="2"/><rect x="422" y="210" width="26" height="0" rx="2"/>
+          <rect x="492" y="210" width="26" height="0" rx="2"/><rect x="562" y="184" width="26" height="26" rx="2"/>
+          <rect x="632" y="210" width="26" height="0" rx="2"/><rect x="702" y="158" width="26" height="52" rx="2"/>
+          <rect x="772" y="210" width="26" height="0" rx="2"/><rect x="842" y="210" width="26" height="0" rx="2"/>
+        </g>
+        <polyline fill="none" stroke="#F59E0B" stroke-width="2.5"
+          points="85,185 155,185 225,185 295,185 365,168 435,168 505,168 575,151 645,151 715,131 785,131 855,131"/>
+        <g fill="#F59E0B">
+          <circle cx="85" cy="185" r="3.5"/><circle cx="365" cy="168" r="3.5"/><circle cx="575" cy="151" r="3.5"/><circle cx="715" cy="131" r="3.5"/>
+        </g>
+        <g class="axis-label" text-anchor="middle" fill="#E5E7EB">
+          <text x="85" y="258">Ene</text><text x="225" y="258">Mar</text><text x="365" y="258">May</text>
+          <text x="505" y="258">Jul</text><text x="645" y="258">Sep</text><text x="785" y="258">Nov</text>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i class="dot" style="background:#F59E0B"></i>Valor alícuota (ARS)</span>
+        <span><i class="dot" style="background:#DC2626"></i>Aumento % por periodo</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Cápitas — Básico 659</h2>
+      <p class="hint">Evolución mensual de cápitas</p>
+      <svg viewBox="0 0 560 220" role="img" aria-label="Cápitas del tipo Básico">
+        <polyline fill="none" stroke="#DC2626" stroke-width="2.5"
+          points="20,120 68,116 116,122 164,130 212,120 260,110 308,118 356,124 404,116 452,110 500,120 548,114"/>
+        <g fill="#EF4444">
+          <circle cx="20" cy="120" r="3.5"/><circle cx="68" cy="116" r="3.5"/><circle cx="116" cy="122" r="3.5"/>
+          <circle cx="164" cy="130" r="3.5"/><circle cx="212" cy="120" r="3.5"/><circle cx="260" cy="110" r="3.5"/>
+          <circle cx="308" cy="118" r="3.5"/><circle cx="356" cy="124" r="3.5"/><circle cx="404" cy="116" r="3.5"/>
+          <circle cx="452" cy="110" r="3.5"/><circle cx="500" cy="120" r="3.5"/><circle cx="548" cy="114" r="3.5"/>
+        </g>
+        <g class="axis-label" text-anchor="middle">
+          <text x="20" y="212">Ene</text><text x="116" y="212">Mar</text><text x="212" y="212">May</text>
+          <text x="308" y="212">Jul</text><text x="404" y="212">Sep</text><text x="500" y="212">Nov</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="panel">
+      <h2>Servicios — Básico 659</h2>
+      <p class="hint">Evolución mensual de servicios</p>
+      <svg viewBox="0 0 560 220" role="img" aria-label="Servicios del tipo Básico">
+        <polyline fill="none" stroke="#DC2626" stroke-width="2.5"
+          points="20,150 68,142 116,132 164,122 212,130 260,120 308,112 356,104 404,96 452,88 500,80 548,72"/>
+        <g class="axis-label" text-anchor="middle">
+          <text x="20" y="212">Ene</text><text x="116" y="212">Mar</text><text x="212" y="212">May</text>
+          <text x="308" y="212">Jul</text><text x="404" y="212">Sep</text><text x="500" y="212">Nov</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="panel full">
+      <h2>Detalle mensual — Básico 659</h2>
+      <p class="hint">Tabla comparativa de los últimos meses</p>
+      <table>
+        <thead>
+          <tr><th>Periodo</th><th class="num">Servicios</th><th class="num">Cápitas</th><th class="num">Valor alícuota</th><th class="num">Aumento</th><th class="num">Coef. uso</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>2025-12</td><td class="num">5.120</td><td class="num">291</td><td class="num">$ 5.052</td><td class="num">—</td><td class="num">0.7318</td></tr>
+          <tr><td>2025-11</td><td class="num">5.008</td><td class="num">290</td><td class="num">$ 5.052</td><td class="num">—</td><td class="num">0.7300</td></tr>
+          <tr><td>2025-10</td><td class="num">4.896</td><td class="num">293</td><td class="num">$ 5.052</td><td class="num">+6%</td><td class="num">0.7288</td></tr>
+          <tr><td>2025-09</td><td class="num">4.784</td><td class="num">290</td><td class="num">$ 4.766</td><td class="num">—</td><td class="num">0.7320</td></tr>
+          <tr><td>2025-08</td><td class="num">4.671</td><td class="num">290</td><td class="num">$ 4.766</td><td class="num">+6%</td><td class="num">0.7310</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+</body>
+</html>
