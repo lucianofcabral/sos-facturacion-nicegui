@@ -39,3 +39,6 @@ series), cápitas y coeficientes. Reemplaza la tabla "servicios por periodo" y e
 - L4: Review nativa (2 lenses) escaló con hallazgo CRÍTICO R3-001 (filtro de año
   eliminado → regresión). Arreglado en `1ecccea`: se restauró el selector de año
   y se corrigió el docstring del port `conteo_por_tipo`. 202 tests en verde.
+- L5: Re-review del fix (`review-760e9ff326457a1a`) APROBADA y receipt quemado
+  (authority burned). 11 findings advisory no bloqueantes (WARNING/SUGGESTION,
+  disposition informational), para trabajo futuro separado.
