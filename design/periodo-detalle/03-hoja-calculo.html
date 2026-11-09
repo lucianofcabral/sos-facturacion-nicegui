@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Período — Hoja de cálculo</title>
+<style>
+  :root{
+    --bg:#121212; --card:#1E1E1E; --row-alt:#191919; --input-bg:#0E0E0E;
+    --border:rgba(255,255,255,.12); --border-soft:rgba(255,255,255,.06);
+    --text:#E8EAED; --muted:#9CA3AF; --faint:#6B7280;
+    --primary:#DC2626; --primary-text:#F87171; --primary-soft:rgba(220,38,38,.12);
+    --ok:#34D399; --ok-soft:rgba(52,211,153,.12);
+    --b-basico:#DC2626; --b-completo:#B91C1C; --b-vip:#7F1D1D;
+    --b-r87:#EF4444; --b-r89:#F87171; --b-r90:#FCA5A5;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  :focus-visible{outline:2px solid var(--primary-text);outline-offset:1px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  .appbar{display:flex;align-items:center;gap:16px;padding:9px 18px;border-bottom:1px solid var(--border-soft);background:#161616}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;letter-spacing:-.01em}
+  .brand-mark{width:20px;height:20px;border-radius:5px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800}
+  .nav{display:flex;gap:2px;margin-left:10px}
+  .nav a{padding:5px 11px;border-radius:7px;color:var(--muted);text-decoration:none;font-size:12.5px;font-weight:500}
+  .nav a[aria-current="page"]{background:var(--primary-soft);color:var(--primary-text);font-weight:600}
+  .user{margin-left:auto;color:var(--muted);font-size:12.5px;display:flex;align-items:center;gap:7px}
+  .avatar{width:24px;height:24px;border-radius:999px;background:#3A3A3A;display:grid;place-items:center;font-size:10.5px;font-weight:700}
+
+  /* barra de título compacta, tipo toolbar */
+  .toolbar{display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid var(--border);background:#151515;position:sticky;top:0;z-index:20;flex-wrap:wrap}
+  .tb-title{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;letter-spacing:-.01em}
+  .tb-sub{font-size:12px;color:var(--faint);display:flex;align-items:center;gap:8px}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.02em;
+    background:var(--ok-soft);color:var(--ok);border:1px solid rgba(52,211,153,.25)}
+  .badge::before{content:"";width:5px;height:5px;border-radius:999px;background:var(--ok)}
+  .tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);
+    font-family:inherit;font-size:12.5px;font-weight:600;padding:6px 11px;min-height:31px;cursor:pointer;white-space:nowrap}
+  .btn:hover{background:rgba(255,255,255,.06)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .btn-primary:hover{background:#C81E1E}
+  .btn-ghost{border-color:transparent;color:var(--muted)}
+  .btn-ghost:hover{color:var(--text);background:rgba(255,255,255,.06)}
+
+  .page{padding:14px 18px 40px}
+
+  /* grilla densa */
+  .sheet{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .sheet-head{display:flex;align-items:center;gap:12px;padding:9px 12px;border-bottom:1px solid var(--border);background:#1A1A1A}
+  .sheet-name{font-size:12.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--muted)}
+  .sheet-total{margin-left:auto;font-size:12.5px;color:var(--faint)}
+  .sheet-total b{color:var(--text);font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
+
+  table.x{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+  table.x th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:700;
+    padding:7px 10px;text-align:right;border-bottom:1px solid var(--border);background:#1A1A1A;white-space:nowrap}
+  table.x th:first-child,table.x td:first-child{text-align:left;padding-left:14px}
+  table.x th:last-child,table.x td:last-child{padding-right:14px}
+  table.x td{padding:4px 10px;border-bottom:1px solid var(--border-soft);text-align:right;height:36px}
+  table.x tbody tr:nth-child(even){background:var(--row-alt)}
+  table.x tbody tr:hover{background:rgba(255,255,255,.035)}
+  .mono{font-family:var(--mono)}
+  .grp td{background:#232323!important;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);
+    font-weight:700;height:26px;padding:0 10px;text-align:left}
+  .grp td span{padding-left:4px}
+  .cat{display:flex;align-items:center;gap:8px;font-weight:500}
+  .dot{width:8px;height:8px;border-radius:3px;flex:none}
+  .cell-in{width:74px;background:var(--input-bg);border:1px solid var(--border);border-radius:4px;color:var(--text);
+    font-family:var(--mono);font-size:13px;font-weight:600;padding:4px 6px;text-align:right}
+  .cell-in:hover{border-color:rgba(255,255,255,.28)}
+  .cell-in:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  .calc{color:var(--muted)}
+  .sub{font-weight:700;color:var(--text)}
+  .warn-cell{color:#FCD34D}
+  table.x tfoot td{border-top:1px solid var(--border);border-bottom:none;font-weight:700;height:38px;background:#1A1A1A}
+  table.x tfoot td.lbl{text-transform:uppercase;font-size:11px;letter-spacing:.06em;color:var(--muted);text-align:left;padding-left:14px}
+
+  .sheet-foot{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#1A1A1A;border-top:1px solid var(--border)}
+  .dirty{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#FCD34D}
+  .dirty::before{content:"";width:6px;height:6px;border-radius:999px;background:#FCD34D}
+  .sheet-foot .spacer{margin-left:auto}
+
+  /* segunda hoja: servicios */
+  .filters{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--border);background:#1A1A1A}
+  .field{display:flex;align-items:center;gap:6px;background:var(--input-bg);border:1px solid var(--border);border-radius:5px;padding:0 8px;min-height:29px}
+  .field:focus-within{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  .field input{background:transparent;border:0;color:var(--text);font:inherit;font-size:12.5px;padding:5px 0;outline:none;min-width:0}
+  .field.grow{flex:1 1 180px}
+  .field.grow input{width:100%}
+  .field.date input{width:112px}
+  table.srv{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+  table.srv th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:700;text-align:left;
+    padding:7px 10px;border-bottom:1px solid var(--border);background:#1A1A1A;position:sticky;top:54px}
+  table.srv td{padding:6px 10px;border-bottom:1px solid var(--border-soft)}
+  table.srv tbody tr:nth-child(even){background:var(--row-alt)}
+  table.srv tbody tr:hover{background:rgba(255,255,255,.035)}
+  table.srv td.code{font-family:var(--mono);color:var(--primary-text);font-weight:600}
+  .tag{display:inline-block;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,.07);font-family:var(--mono);font-size:11.5px}
+  .srv-foot{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:#1A1A1A;border-top:1px solid var(--border);font-size:12px;color:var(--faint)}
+  .pg{min-width:26px;min-height:26px;display:grid;place-items:center;border-radius:5px;border:1px solid transparent;background:transparent;color:var(--muted);font:inherit;font-size:12px;cursor:pointer}
+  .pg[aria-current="true"]{background:var(--primary-soft);color:var(--primary-text);border-color:rgba(220,38,38,.3);font-weight:700}
+  .pg:hover{background:rgba(255,255,255,.06)}
+  div.scroll{max-height:330px;overflow:auto}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;padding:8px 18px 0;font-size:11.5px;color:var(--faint);align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+<header class="appbar">
+  <div class="brand"><span class="brand-mark">S</span> SOS Facturación</div>
+  <nav class="nav" aria-label="Principal">
+    <a href="#" aria-current="page">Períodos</a>
+    <a href="#">Tipos de servicio</a>
+    <a href="#">Reportes</a>
+    <a href="#">Usuarios</a>
+  </nav>
+  <div class="user"><span>admin</span><span class="avatar" aria-hidden="true">AD</span></div>
+</header>
+
+<div class="toolbar">
+  <div class="tb-title">JULIO 2025 <span class="badge">OFICIAL</span></div>
+  <div class="tb-sub">2025 / 7 · cierre 04/08/2025 09:12</div>
+  <div class="tb-right">
+    <button class="btn btn-ghost" type="button">Editar datos</button>
+    <button class="btn" type="button">Descargar Excel</button>
+    <button class="btn" type="button">Regenerar cierre</button>
+    <button class="btn btn-primary" type="button">Guardar cápitas</button>
+  </div>
+</div>
+
+<div class="page">
+  <!-- hoja 1: cuadro de síntesis editable -->
+  <section class="sheet" aria-labelledby="cuadro-title">
+    <div class="sheet-head">
+      <div class="sheet-name" id="cuadro-title">Cuadro de síntesis</div>
+      <div class="sheet-total">Total a pagar <b>$ 48.735.216,40</b></div>
+    </div>
+    <table class="x">
+      <caption class="sr">Cuadro de síntesis con cápitas, servicios, coeficientes, valores y subtotales por categoría</caption>
+      <thead>
+        <tr>
+          <th scope="col">Categoría</th>
+          <th scope="col">Cápitas</th>
+          <th scope="col">Servicios</th>
+          <th scope="col">Coef. uso</th>
+          <th scope="col">Coef. índice</th>
+          <th scope="col">Valor unitario</th>
+          <th scope="col">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody class="grp"><tr><td colspan="7"><span>Automotores</span></td></tr></tbody>
+      <tbody>
+        <tr>
+          <td><span class="cat"><span class="dot" style="background:var(--b-basico)"></span>Básico 659</span></td>
+          <td><input class="cell-in" type="number" min="0" value="412" aria-label="Cápitas de Básico 659"></td>
+          <td class="mono calc">398</td>
+          <td class="mono calc">96,60 %</td>
+          <td class="mono calc">100,00 %</td>
+          <td class="mono calc">$ 12.480,00</td>
+          <td class="mono sub">$ 5.141.760,00</td>
+        </tr>
+        <tr>
+          <td><span class="cat"><span class="dot" style="background:var(--b-completo)"></span>Completo 660</span></td>
+          <td><input class="cell-in" type="number" min="0" value="298" aria-label="Cápitas de Completo 660"></td>
+          <td class="mono calc">281</td>
+          <td class="mono calc">94,30 %</td>
+          <td class="mono calc">100,00 %</td>
+          <td class="mono calc">$ 21.760,00</td>
+          <td class="mono sub">$ 6.484.480,00</td>
+        </tr>
+        <tr>
+          <td><span class="cat"><span class="dot" style="background:var(--b-vip)"></span>VIP 658</span></td>
+          <td><input class="cell-in" type="number" min="0" value="87" aria-label="Cápitas de VIP 658"></td>
+          <td class="mono calc">79</td>
+          <td class="mono calc">90,80 %</td>
+          <td class="mono calc">95,00 %</td>
+          <td class="mono calc">$ 34.900,00</td>
+          <td class="mono sub">$ 3.036.300,00</td>
+        </tr>
+      </tbody>
+      <tbody class="grp"><tr><td colspan="7"><span>Ramas varias</span></td></tr></tbody>
+      <tbody>
+        <tr>
+          <td><span class="cat"><span class="dot" style="background:var(--b-r87)"></span>Rama 87</span></td>
+          <td><input class="cell-in" type="number" min="0" value="34" aria-label="Cápitas de Rama 87"></td>
+          <td class="mono calc">31</td>
+          <td class="mono calc">91,18 %</td>
+          <td class="mono calc">95,00 %</td>
+          <td class="mono calc">—</td>
+          <td class="mono calc warn-cell">sin valor</td>
+        </tr>
+        <tr>
+          <td><span class="cat"><span class="dot" style="background:var(--b-r89)"></span>Rama 89</span></td>
+          <td><input class="cell-in" type="number" min="0" value="21" aria-label="Cápitas de Rama 89"></td>
+          <td class="mono calc">18</td>
+          <td class="mono calc">85,71 %</td>
+          <td class="mono calc">95,00 %</td>
+          <td class="mono calc">—</td>
+          <td class="mono calc warn-cell">sin valor</td>
+        </tr>
+        <tr>
+          <td><span class="cat"><span class="dot" style="background:var(--b-r90)"></span>Rama 90</span></td>
+          <td><input class="cell-in" type="number" min="0" value="12" aria-label="Cápitas de Rama 90"></td>
+          <td class="mono calc">9</td>
+          <td class="mono calc">75,00 %</td>
+          <td class="mono calc">95,00 %</td>
+          <td class="mono calc">—</td>
+          <td class="mono calc warn-cell">sin valor</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="lbl">Totales del período</td>
+          <td class="mono">864</td>
+          <td class="mono">816</td>
+          <td class="mono">78,45 %</td>
+          <td class="mono">80,00 %</td>
+          <td class="mono">—</td>
+          <td class="mono">$ 48.735.216,40</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="sheet-foot">
+      <span class="dirty">Cambios sin guardar</span>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" type="button">Descartar</button>
+      <button class="btn btn-primary" type="button">Guardar cápitas</button>
+    </div>
+  </section>
+
+  <div class="legend">
+    <span><span class="dot" style="background:var(--b-basico)"></span>Automotores</span>
+    <span><span class="dot" style="background:var(--b-r87)"></span>Ramas varias</span>
+    <span>Las columnas de coeficiente y valor se recalculan al guardar.</span>
+  </div>
+
+  <!-- hoja 2: servicios -->
+  <section class="sheet" aria-labelledby="srv-title" style="margin-top:14px">
+    <div class="sheet-head">
+      <div class="sheet-name" id="srv-title">Servicios</div>
+      <div class="sheet-total">816 registros</div>
+    </div>
+    <div class="filters">
+      <div class="field grow">
+        <label class="sr" for="q">Buscar por texto</label>
+        <input id="q" type="search" placeholder="Servicio, dominio o productor…">
+      </div>
+      <div class="field date">
+        <label class="sr" for="d1">Desde</label>
+        <input id="d1" type="date" value="2025-07-01">
+      </div>
+      <div class="field date">
+        <label class="sr" for="d2">Hasta</label>
+        <input id="d2" type="date" value="2025-07-31">
+      </div>
+      <button class="btn" type="button">Filtrar</button>
+      <button class="btn btn-ghost" type="button">Limpiar</button>
+    </div>
+    <div class="scroll">
+      <table class="srv">
+        <thead>
+          <tr>
+            <th scope="col">N° servicio</th>
+            <th scope="col">Cód. radio</th>
+            <th scope="col">Fecha</th>
+            <th scope="col">Dominio</th>
+            <th scope="col">Productor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">4521</td><td class="code">659</td><td class="mono">2025-07-03</td><td><span class="tag">AB123CD</span></td><td class="mono">1042</td></tr>
+          <tr><td class="mono">4522</td><td class="code">659</td><td class="mono">2025-07-03</td><td><span class="tag">AC884JK</span></td><td class="mono">1042</td></tr>
+          <tr><td class="mono">4523</td><td class="code">660</td><td class="mono">2025-07-04</td><td><span class="tag">AD117LM</span></td><td class="mono">2018</td></tr>
+          <tr><td class="mono">4524</td><td class="code">660</td><td class="mono">2025-07-04</td><td><span class="tag">AE905QT</span></td><td class="mono">2018</td></tr>
+          <tr><td class="mono">4525</td><td class="code">658</td><td class="mono">2025-07-05</td><td><span class="tag">AF330BZ</span></td><td class="mono">3077</td></tr>
+          <tr><td class="mono">4526</td><td class="code">659</td><td class="mono">2025-07-06</td><td><span class="tag">AG771NV</span></td><td class="mono">1042</td></tr>
+          <tr><td class="mono">4527</td><td class="code">660</td><td class="mono">2025-07-07</td><td><span class="tag">AH220RC</span></td><td class="mono">2018</td></tr>
+          <tr><td class="mono">4528</td><td class="code">659</td><td class="mono">2025-07-08</td><td><span class="tag">AI664DS</span></td><td class="mono">3077</td></tr>
+          <tr><td class="mono">4529</td><td class="code">658</td><td class="mono">2025-07-09</td><td><span class="tag">AJ903FX</span></td><td class="mono">1042</td></tr>
+          <tr><td class="mono">4530</td><td class="code">659</td><td class="mono">2025-07-10</td><td><span class="tag">AK551PP</span></td><td class="mono">2018</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="srv-foot">
+      <span>Mostrando 1–15 de 816</span>
+      <div style="display:flex;gap:3px">
+        <button class="pg" type="button" aria-label="Página anterior">‹</button>
+        <button class="pg" type="button" aria-current="true">1</button>
+        <button class="pg" type="button">2</button>
+        <button class="pg" type="button">3</button>
+        <button class="pg" type="button" aria-label="Página siguiente">›</button>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

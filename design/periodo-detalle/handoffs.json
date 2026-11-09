@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "chosen": "01-panel-trabajo.html",
+  "handoffs": {
+    "01-panel-trabajo.html": {
+      "status": "implemented",
+      "queued": false,
+      "sentAt": "2026-11-09T13:48:12.242Z",
+      "startedAt": "2026-11-09T13:48:15.103Z",
+      "implementedAt": "2026-11-09T13:53:13.975Z",
+      "note": "Panel de trabajo implementado en periodo_detalle.py: cápitas en tabla editable, sidebar fija con resumen, cierre, import visible e historial.",
+      "previewUrl": "http://127.0.0.1:8080/"
+    }
+  }
+}

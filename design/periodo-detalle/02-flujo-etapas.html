@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Período — Flujo por etapas</title>
+<style>
+  :root{
+    --bg:#121212; --card:#1E1E1E; --card-2:#181818;
+    --border:rgba(255,255,255,.12); --border-soft:rgba(255,255,255,.07);
+    --text:#E8EAED; --muted:#9CA3AF; --faint:#6B7280;
+    --primary:#DC2626; --primary-text:#F87171; --primary-soft:rgba(220,38,38,.12);
+    --ok:#34D399; --ok-soft:rgba(52,211,153,.12);
+    --b-basico:#DC2626; --b-completo:#B91C1C; --b-vip:#7F1D1D;
+    --b-r87:#EF4444; --b-r89:#F87171; --b-r90:#FCA5A5;
+    --radius:.75rem;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  :focus-visible{outline:2px solid var(--primary-text);outline-offset:2px;border-radius:4px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  .appbar{display:flex;align-items:center;gap:16px;padding:10px 24px;border-bottom:1px solid var(--border-soft);background:#161616}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.01em}
+  .brand-mark{width:22px;height:22px;border-radius:6px;background:var(--primary);display:grid;place-items:center;color:#fff;font-size:12px;font-weight:800}
+  .nav{display:flex;gap:4px;margin-left:12px}
+  .nav a{padding:6px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:13px;font-weight:500}
+  .nav a[aria-current="page"]{background:var(--primary-soft);color:var(--primary-text);font-weight:600}
+  .user{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+  .avatar{width:26px;height:26px;border-radius:999px;background:#3A3A3A;display:grid;place-items:center;font-size:11px;font-weight:700}
+
+  .shell{max-width:1180px;margin:0 auto;padding:26px 24px 64px;display:grid;grid-template-columns:212px minmax(0,1fr);gap:36px;align-items:start}
+  @media (max-width:900px){.shell{grid-template-columns:minmax(0,1fr);gap:20px}}
+
+  /* rail de etapas */
+  .rail{position:sticky;top:24px}
+  @media (max-width:900px){.rail{position:static}}
+  .rail-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700;margin-bottom:12px}
+  .rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+  .rail li{position:relative}
+  .rail a{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:center;padding:8px 8px;border-radius:8px;text-decoration:none;color:var(--muted);font-size:13.5px;font-weight:550}
+  .rail a:hover{background:rgba(255,255,255,.04);color:var(--text)}
+  .rail a[aria-current="true"]{background:var(--primary-soft);color:var(--primary-text);font-weight:700}
+  .rail a[data-done="true"]{color:var(--text)}
+  .step-no{width:24px;height:24px;border-radius:999px;display:grid;place-items:center;font-size:11.5px;font-weight:700;font-family:var(--mono);
+    background:rgba(255,255,255,.07);color:var(--muted);border:1px solid transparent}
+  .rail a[aria-current="true"] .step-no{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .rail a[data-done="true"] .step-no{background:rgba(52,211,153,.15);color:var(--ok);border-color:rgba(52,211,153,.3)}
+  .rail-note{margin-top:14px;padding:10px 11px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid var(--border-soft);font-size:12px;color:var(--faint);line-height:1.5}
+  .rail-note strong{color:var(--text);display:block;margin-bottom:2px;font-weight:650}
+
+  /* encabezado */
+  .crumb{font-size:12px;color:var(--faint);margin-bottom:8px}
+  .crumb a{color:var(--faint);text-decoration:none}
+  h1{margin:0;font-size:27px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:600;border:1px solid rgba(52,211,153,.25);background:var(--ok-soft);color:var(--ok)}
+  .badge::before{content:"";width:6px;height:6px;border-radius:999px;background:var(--ok)}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:26px;padding-bottom:20px;border-bottom:1px solid var(--border-soft)}
+  .head-meta{color:var(--muted);font-size:13px;margin-top:6px}
+  .head-total{text-align:right}
+  .head-total .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:700}
+  .head-total .val{font-size:26px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:2px}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-family:inherit;font-size:13px;font-weight:600;padding:8px 14px;min-height:38px;cursor:pointer}
+  .btn:hover{background:rgba(255,255,255,.05)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .btn-primary:hover{background:#C81E1E;border-color:#C81E1E}
+  .btn-ghost{border-color:transparent;color:var(--muted)}
+  .btn-ghost:hover{color:var(--text);background:rgba(255,255,255,.05)}
+  .btn-sm{padding:6px 11px;min-height:33px;font-size:12.5px}
+
+  /* etapas */
+  .stage{margin-bottom:22px}
+  .stage-head{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+  .stage-no{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-family:var(--mono);font-size:12.5px;font-weight:700;
+    background:rgba(255,255,255,.07);color:var(--muted)}
+  .stage[data-state="current"] .stage-no{background:var(--primary);color:#fff}
+  .stage[data-state="done"] .stage-no{background:rgba(52,211,153,.15);color:var(--ok)}
+  .stage-title{font-size:16px;font-weight:680;letter-spacing:-.01em;margin:0}
+  .stage-desc{font-size:12.5px;color:var(--faint);margin:1px 0 0}
+  .stage-flag{margin-left:auto;font-size:11.5px;font-weight:650;padding:3px 9px;border-radius:999px;background:rgba(52,211,153,.12);color:var(--ok)}
+  .stage-flag.warn{background:rgba(252,211,77,.12);color:#FCD34D}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,.45)}
+  .stage[data-state="current"] .card{border-color:rgba(220,38,38,.4);box-shadow:0 0 0 3px rgba(220,38,38,.08),0 1px 3px rgba(0,0,0,.45)}
+  .card-body{padding:16px}
+  .card-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--border-soft);background:rgba(255,255,255,.02);border-radius:0 0 var(--radius) var(--radius)}
+  .card-foot .spacer{margin-left:auto}
+
+  /* tiles de cápitas: 3 columnas, una fila por grupo con etiqueta al costado */
+  .cap-group{display:grid;grid-template-columns:104px repeat(3,minmax(0,1fr));gap:10px;align-items:center}
+  .cap-group+.cap-group{margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft)}
+  .cap-group-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:700}
+  @media (max-width:720px){
+    .cap-group{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .cap-group-label{grid-column:1/-1;margin-bottom:-2px}
+  }
+  .tile{border:1px solid var(--border);border-radius:9px;padding:10px 11px;background:var(--card-2)}
+  .tile-top{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+  .dot{width:8px;height:8px;border-radius:999px;flex:none}
+  .tile-label{font-size:11.5px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cap-input{width:100%;background:#101010;border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--mono);font-size:15px;font-weight:600;padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums}
+  .cap-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .tile-sub{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-top:6px;font-family:var(--mono)}
+  .summary-line{display:flex;gap:22px;padding:12px 16px;border-top:1px solid var(--border-soft);font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+  .summary-line b{color:var(--text);font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  /* paso 3: acciones de cierre */
+  .action-list{display:flex;flex-direction:column;gap:10px}
+  .action{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:12px 13px;border:1px solid var(--border-soft);border-radius:9px;background:var(--card-2)}
+  .action-name{font-size:13.5px;font-weight:650}
+  .action-desc{font-size:12px;color:var(--faint);margin-top:2px;line-height:1.45}
+
+  /* paso 4: servicios */
+  .filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--border-soft)}
+  .field{display:flex;align-items:center;gap:7px;background:#171717;border:1px solid var(--border);border-radius:8px;padding:0 10px;min-height:36px}
+  .field:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .field input{background:transparent;border:0;color:var(--text);font:inherit;font-size:13px;padding:7px 0;outline:none;min-width:0}
+  .field.grow{flex:1 1 200px}
+  .field.grow input{width:100%}
+  table.grid{width:100%;border-collapse:collapse;font-size:13px}
+  table.grid thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:700;padding:9px 16px;border-bottom:1px solid var(--border)}
+  table.grid tbody td{padding:9px 16px;border-bottom:1px solid var(--border-soft)}
+  table.grid tbody tr:last-child td{border-bottom:none}
+  table.grid tbody tr:hover{background:rgba(255,255,255,.03)}
+  table.grid td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  table.grid td.code{font-family:var(--mono);color:var(--primary-text);font-weight:600}
+  .tag{display:inline-block;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.06);font-family:var(--mono);font-size:12px}
+  .pager{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;font-size:12.5px;color:var(--faint)}
+  .pg{min-width:30px;min-height:30px;display:grid;place-items:center;border-radius:7px;border:1px solid transparent;background:transparent;color:var(--muted);font:inherit;font-size:12.5px;cursor:pointer}
+  .pg[aria-current="true"]{background:var(--primary-soft);color:var(--primary-text);border-color:rgba(220,38,38,.3);font-weight:700}
+  .pg:hover{background:rgba(255,255,255,.06)}
+  .drop{border:1px dashed rgba(255,255,255,.18);border-radius:8px;padding:14px;text-align:center;font-size:12.5px;color:var(--faint)}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .seg button{background:transparent;border:0;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;min-height:32px}
+  .seg button[aria-pressed="true"]{background:var(--primary-soft);color:var(--primary-text)}
+</style>
+</head>
+<body>
+<header class="appbar">
+  <div class="brand"><span class="brand-mark">S</span> SOS Facturación</div>
+  <nav class="nav" aria-label="Principal">
+    <a href="#" aria-current="page">Períodos</a>
+    <a href="#">Tipos de servicio</a>
+    <a href="#">Reportes</a>
+    <a href="#">Usuarios</a>
+  </nav>
+  <div class="user"><span>admin</span><span class="avatar" aria-hidden="true">AD</span></div>
+</header>
+
+<div class="shell">
+  <!-- rail -->
+  <nav class="rail" aria-label="Etapas del período">
+    <div class="rail-title">Etapas</div>
+    <ol>
+      <li><a href="#s1" data-done="true"><span class="step-no" aria-hidden="true">1</span>Datos del período</a></li>
+      <li><a href="#s2" aria-current="true"><span class="step-no" aria-hidden="true">2</span>Cápitas</a></li>
+      <li><a href="#s3"><span class="step-no" aria-hidden="true">3</span>Cierre</a></li>
+      <li><a href="#s4"><span class="step-no" aria-hidden="true">4</span>Servicios</a></li>
+    </ol>
+    <div class="rail-note">
+      <strong>Estado del cierre</strong>
+      Oficial generado el 04/08. Regenerar pide confirmación.
+    </div>
+  </nav>
+
+  <main>
+    <div class="head">
+      <div>
+        <div class="crumb"><a href="#">Períodos</a> / Julio 2025</div>
+        <h1>JULIO 2025 <span class="badge">Oficial</span></h1>
+        <div class="head-meta">Período 2025 / 7</div>
+      </div>
+      <div class="head-total">
+        <div class="lbl">Total a pagar</div>
+        <div class="val">$ 48.735.216,40</div>
+      </div>
+    </div>
+
+    <!-- etapa 1 -->
+    <section class="stage" id="s1" data-state="done">
+      <div class="stage-head">
+        <span class="stage-no" aria-hidden="true">1</span>
+        <div>
+          <h2 class="stage-title">Datos del período</h2>
+          <p class="stage-desc">Nombre, año y mes del ciclo.</p>
+        </div>
+        <span class="stage-flag">Completo</span>
+      </div>
+      <div class="card">
+        <div class="card-body" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end">
+          <div>
+            <div class="lbl" style="font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);font-weight:700">Nombre</div>
+            <div style="font-size:15px;font-weight:600;margin-top:3px">JULIO 2025</div>
+          </div>
+          <div>
+            <div class="lbl" style="font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);font-weight:700">Año</div>
+            <div style="font-size:15px;font-weight:600;margin-top:3px;font-family:var(--mono)">2025</div>
+          </div>
+          <div>
+            <div class="lbl" style="font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);font-weight:700">Mes</div>
+            <div style="font-size:15px;font-weight:600;margin-top:3px;font-family:var(--mono)">7</div>
+          </div>
+          <button class="btn btn-sm btn-ghost" type="button" style="margin-left:auto">Editar datos</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- etapa 2 -->
+    <section class="stage" id="s2" data-state="current">
+      <div class="stage-head">
+        <span class="stage-no" aria-hidden="true">2</span>
+        <div>
+          <h2 class="stage-title">Cápitas</h2>
+          <p class="stage-desc">Cantidad de asociados por categoría en el período.</p>
+        </div>
+        <span class="stage-flag warn">Cambios sin guardar</span>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="cap-group">
+            <div class="cap-group-label">Automotores</div>
+            <div class="tile">
+              <div class="tile-top"><span class="dot" style="background:var(--b-basico)"></span><span class="tile-label">Básico 659</span></div>
+              <input class="cap-input" type="number" min="0" value="412" aria-label="Cápitas de Básico 659">
+              <div class="tile-sub"><span>398 serv.</span><span>52,1 %</span></div>
+            </div>
+            <div class="tile">
+              <div class="tile-top"><span class="dot" style="background:var(--b-completo)"></span><span class="tile-label">Completo 660</span></div>
+              <input class="cap-input" type="number" min="0" value="298" aria-label="Cápitas de Completo 660">
+              <div class="tile-sub"><span>281 serv.</span><span>37,7 %</span></div>
+            </div>
+            <div class="tile">
+              <div class="tile-top"><span class="dot" style="background:var(--b-vip)"></span><span class="tile-label">VIP 658</span></div>
+              <input class="cap-input" type="number" min="0" value="87" aria-label="Cápitas de VIP 658">
+              <div class="tile-sub"><span>79 serv.</span><span>11,0 %</span></div>
+            </div>
+          </div>
+
+          <div class="cap-group">
+            <div class="cap-group-label">Ramas varias</div>
+            <div class="tile">
+              <div class="tile-top"><span class="dot" style="background:var(--b-r87)"></span><span class="tile-label">Rama 87</span></div>
+              <input class="cap-input" type="number" min="0" value="34" aria-label="Cápitas de Rama 87">
+              <div class="tile-sub"><span>31 serv.</span><span>4,3 %</span></div>
+            </div>
+            <div class="tile">
+              <div class="tile-top"><span class="dot" style="background:var(--b-r89)"></span><span class="tile-label">Rama 89</span></div>
+              <input class="cap-input" type="number" min="0" value="21" aria-label="Cápitas de Rama 89">
+              <div class="tile-sub"><span>18 serv.</span><span>2,7 %</span></div>
+            </div>
+            <div class="tile">
+              <div class="tile-top"><span class="dot" style="background:var(--b-r90)"></span><span class="tile-label">Rama 90</span></div>
+              <input class="cap-input" type="number" min="0" value="12" aria-label="Cápitas de Rama 90">
+              <div class="tile-sub"><span>9 serv.</span><span>1,5 %</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="summary-line">
+          <span>Total cápitas <b>864</b></span>
+          <span>Automotores <b>797</b></span>
+          <span>Ramas <b>67</b></span>
+          <span>Servicios <b>816</b></span>
+        </div>
+        <div class="card-foot">
+          <span style="font-size:12.5px;color:#FCD34D">Los cambios no afectan el cierre hasta que guardes.</span>
+          <span class="spacer"></span>
+          <button class="btn btn-sm btn-ghost" type="button">Descartar</button>
+          <button class="btn btn-sm btn-primary" type="button">Guardar cápitas</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- etapa 3 -->
+    <section class="stage" id="s3">
+      <div class="stage-head">
+        <span class="stage-no" aria-hidden="true">3</span>
+        <div>
+          <h2 class="stage-title">Cierre</h2>
+          <p class="stage-desc">Genera el cuadro oficial o descarga el reporte.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="action-list">
+            <div class="action">
+              <div>
+                <div class="action-name">Regenerar cierre</div>
+                <div class="action-desc">Vuelve a calcular el cuadro con las cápitas y servicios actuales. Reemplaza el cierre oficial vigente.</div>
+              </div>
+              <button class="btn btn-primary" type="button">Regenerar</button>
+            </div>
+            <div class="action">
+              <div>
+                <div class="action-name">Descargar Excel</div>
+                <div class="action-desc">Reporte de 5 hojas con el cuadro de síntesis y las hojas de entrada.</div>
+              </div>
+              <button class="btn" type="button">Descargar</button>
+            </div>
+            <div class="action">
+              <div>
+                <div class="action-name">Importar servicios</div>
+                <div class="action-desc">Sube el workbook del período. En <em>reemplazo</em> se borran los servicios actuales del período.</div>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:9px">
+                  <div class="seg" role="group" aria-label="Modo de importación">
+                    <button type="button" aria-pressed="true">Upsert</button>
+                    <button type="button" aria-pressed="false">Reemplazo</button>
+                  </div>
+                  <div class="drop" style="flex:1;padding:9px">Elegí un <strong>.xlsx</strong></div>
+                </div>
+              </div>
+              <button class="btn" type="button">Subir</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- etapa 4 -->
+    <section class="stage" id="s4">
+      <div class="stage-head">
+        <span class="stage-no" aria-hidden="true">4</span>
+        <div>
+          <h2 class="stage-title">Servicios</h2>
+          <p class="stage-desc">816 servicios cargados en el período.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="filters">
+          <div class="field grow">
+            <label class="sr" for="q">Buscar por texto</label>
+            <input id="q" type="search" placeholder="Servicio, dominio o productor…">
+          </div>
+          <div class="field">
+            <label class="sr" for="d1">Desde</label>
+            <input id="d1" type="date" value="2025-07-01" style="width:124px">
+          </div>
+          <div class="field">
+            <label class="sr" for="d2">Hasta</label>
+            <input id="d2" type="date" value="2025-07-31" style="width:124px">
+          </div>
+          <button class="btn btn-sm" type="button">Filtrar</button>
+          <button class="btn btn-sm btn-ghost" type="button">Limpiar</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="grid">
+            <thead>
+              <tr>
+                <th scope="col">N° servicio</th>
+                <th scope="col">Cód. radio</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Dominio</th>
+                <th scope="col">Productor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">4521</td><td><span class="code">659</span></td><td class="mono">2025-07-03</td><td><span class="tag">AB123CD</span></td><td class="mono">1042</td></tr>
+              <tr><td class="mono">4522</td><td><span class="code">659</span></td><td class="mono">2025-07-03</td><td><span class="tag">AC884JK</span></td><td class="mono">1042</td></tr>
+              <tr><td class="mono">4523</td><td><span class="code">660</span></td><td class="mono">2025-07-04</td><td><span class="tag">AD117LM</span></td><td class="mono">2018</td></tr>
+              <tr><td class="mono">4524</td><td><span class="code">660</span></td><td class="mono">2025-07-04</td><td><span class="tag">AE905QT</span></td><td class="mono">2018</td></tr>
+              <tr><td class="mono">4525</td><td><span class="code">658</span></td><td class="mono">2025-07-05</td><td><span class="tag">AF330BZ</span></td><td class="mono">3077</td></tr>
+              <tr><td class="mono">4526</td><td><span class="code">659</span></td><td class="mono">2025-07-06</td><td><span class="tag">AG771NV</span></td><td class="mono">1042</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <span>Mostrando 1–15 de 816</span>
+          <div style="display:flex;gap:4px">
+            <button class="pg" type="button" aria-label="Página anterior">‹</button>
+            <button class="pg" type="button" aria-current="true">1</button>
+            <button class="pg" type="button">2</button>
+            <button class="pg" type="button">3</button>
+            <button class="pg" type="button" aria-label="Página siguiente">›</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>
