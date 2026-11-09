@@ -134,12 +134,18 @@ async def open_cierre_dialog(periodo: dict, *, regenerar: bool) -> None:
     """
     titulo = "Regenerar cierre" if regenerar else "Generar cierre"
 
+    oficial = None
     baseline: dict | None = None
     if regenerar:
         async with PostgresUoW() as uow:
             oficial = await uow.cierres.get_oficial(periodo["id"])
             if oficial is not None:
                 baseline = await cierre_uc._cuadro_de_cierre(uow, oficial)
+
+    # Al regenerar, el formulario arranca con los valores del cierre oficial
+    # vigente: el aumento y el motivo que realmente se aplicaron.
+    aumento_inicial = float(oficial.aumento) if oficial is not None else 0.0
+    motivo_inicial = (oficial.motivo or "") if oficial is not None else ""
 
     with ui.dialog() as dialog, ui.card().classes("w-[58rem] max-w-[95vw] gap-0 p-0"):
         # --- encabezado ------------------------------------------------------
@@ -153,15 +159,26 @@ async def open_cierre_dialog(periodo: dict, *, regenerar: bool) -> None:
         with ui.column().classes("w-full p-5 gap-4"):
             with ui.row().classes("w-full items-start gap-4 no-wrap"):
                 aumento = (
-                    ui.number(label="Aumento (%)", value=0.0, min=-99.99, step=0.01)
+                    ui.number(
+                        label="Aumento (%)",
+                        value=aumento_inicial,
+                        min=-99.99,
+                        step=0.01,
+                    )
                     .props("dense outlined")
                     .classes("w-40")
                 )
                 motivo = (
-                    ui.input(label="Motivo (opcional)")
+                    ui.input(label="Motivo (opcional)", value=motivo_inicial)
                     .props("dense outlined")
                     .classes("grow")
                 )
+
+            if oficial is not None:
+                ui.label(
+                    "Precargado del cierre oficial vigente. Cambiá el aumento o "
+                    "el motivo si el nuevo cierre difiere."
+                ).classes(_CAPTION)
 
             if regenerar:
                 with (
