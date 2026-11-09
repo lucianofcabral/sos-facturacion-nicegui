@@ -35,3 +35,18 @@ def format_int(value) -> str:
         return f"{int(value):,}"
     except (TypeError, ValueError):
         return "—"
+
+
+def format_pct(value, *, fraction: bool = True) -> str:
+    """Formatea un porcentaje es-AR con dos decimales y sufijo ``%``.
+
+    Con ``fraction=True`` (default) el valor es una fracción 0..1 — así vienen
+    ``coef_uso`` y ``coef_indice`` en el cuadro de síntesis — y se multiplica por
+    100. Con ``fraction=False`` el valor ya es un porcentaje, como el ``aumento``
+    del cierre. Devuelve ``—`` cuando no es numérico.
+    """
+    try:
+        numero = float(value) * (100 if fraction else 1)
+    except (TypeError, ValueError):
+        return "—"
+    return f"{numero:.2f}".replace(".", ",") + " %"
