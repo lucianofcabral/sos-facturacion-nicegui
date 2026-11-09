@@ -18,7 +18,7 @@ from src.domain.dto.create import CreatePeriodo
 from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.dialogos import open_form_dialog
 from src.ui.dialogos.periodo import PERIODO_FIELDS
-from src.ui.formatos import format_ars
+from src.ui.formatos import format_ars, format_pct
 from src.ui.theme import CATEGORIA_COLORS
 
 _PAGE_SIZE = 24
@@ -78,14 +78,6 @@ def _fmt_entero(v) -> str:
     """Formatea un entero con separador de miles; ``—`` si no es numérico."""
     try:
         return f"{int(v):,}"
-    except (TypeError, ValueError):
-        return "—"
-
-
-def _fmt_porcentaje(v) -> str:
-    """Formatea un coeficiente (0..1) como porcentaje; ``—`` si no es numérico."""
-    try:
-        return f"{float(v) * 100:.2f}%"
     except (TypeError, ValueError):
         return "—"
 
@@ -165,9 +157,13 @@ def _render_sintesis(cuadro: dict) -> None:
         "w-full gap-x-4 items-start"
     ):
         with ui.column().classes("w-full gap-1"):
-            _seccion("Coeficientes")
-            _stat("Coef. uso", _fmt_porcentaje(cuadro.get("coef_uso")))
-            _stat("Coef. índice", _fmt_porcentaje(cuadro.get("coef_indice")))
+            _seccion("Ajuste")
+            _stat(
+                "Aumento",
+                format_pct(cuadro.get("aumento"), fraction=False),
+            )
+            _stat("Coef. uso", format_pct(cuadro.get("coef_uso")))
+            _stat("Coef. índice", format_pct(cuadro.get("coef_indice")))
 
         with ui.column().classes("w-full gap-1"):
             _seccion("Valores")
