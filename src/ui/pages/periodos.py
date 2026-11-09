@@ -19,6 +19,7 @@ from src.infrastructure.adapters.uow import PostgresUoW
 from src.ui.dialogos import open_form_dialog
 from src.ui.dialogos.periodo import PERIODO_FIELDS
 from src.ui.formatos import format_ars
+from src.ui.theme import CATEGORIA_COLORS
 
 _PAGE_SIZE = 24
 
@@ -56,10 +57,20 @@ async def _crear_periodo() -> None:
     )
 
 
-def _stat(label: str, value: str) -> None:
-    """Par label/valor alineado a lo ancho (celda del grid de síntesis)."""
-    with ui.row().classes("w-full items-center justify-between"):
-        ui.label(label).classes("text-caption text-grey-7")
+def _stat(label: str, value: str, *, color: str | None = None) -> None:
+    """Par label/valor alineado a lo ancho (celda del grid de síntesis).
+
+    ``color`` dibuja un punto de categoría antes del label, usando la paleta
+    por ``categoria`` de ``theme.CATEGORIA_COLORS``.
+    """
+    with ui.row().classes("w-full items-center justify-between gap-2"):
+        with ui.row().classes("items-center gap-1.5 min-w-0"):
+            if color:
+                ui.element("span").style(
+                    f"display:inline-block;width:8px;height:8px;"
+                    f"border-radius:9999px;background:{color};flex-shrink:0"
+                )
+            ui.label(label).classes("text-caption text-grey-7")
         ui.label(value).classes("text-caption text-right")
 
 
@@ -71,8 +82,35 @@ def _fmt_entero(v) -> str:
         return "—"
 
 
+def _fmt_porcentaje(v) -> str:
+    """Formatea un coeficiente (0..1) como porcentaje; ``—`` si no es numérico."""
+    try:
+        return f"{float(v) * 100:.2f}%"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _seccion(titulo: str) -> None:
+    """Mini-encabezado de sección dentro del cuadro de síntesis."""
+    ui.separator()
+    ui.label(titulo).classes(
+        "text-caption font-bold uppercase tracking-wide text-grey-6"
+    )
+
+
+def _grid_sintesis():
+    """Grilla de 2 columnas para las celdas de una sección del cuadro."""
+    return ui.grid(columns="repeat(2, minmax(0, 1fr))").classes(
+        "w-full gap-x-4 gap-y-1"
+    )
+
+
 def _render_sintesis(cuadro: dict) -> None:
-    """Renderiza el cuadro oficial completo dentro de una card de periodo."""
+    """Renderiza el cuadro oficial completo dentro de una card de periodo.
+
+    Agrupa las cápitas en Automotores vs Ramas Varias y separa coeficientes y
+    valores en secciones propias, con puntos de color por categoría.
+    """
     capitas = cuadro.get("capitas") or {}
     servicios = cuadro.get("servicios") or {}
     valores = cuadro.get("valores") or {}
@@ -80,22 +118,74 @@ def _render_sintesis(cuadro: dict) -> None:
     ui.label("Total a pagar").classes("text-caption")
     ui.label(format_ars(cuadro.get("total_a_pagar"))).classes("text-h5 text-primary")
 
-    with ui.grid(columns="repeat(2, minmax(0, 1fr))").classes(
-        "w-full gap-x-4 gap-y-1 mt-1"
-    ):
+    with _grid_sintesis().classes("mt-1"):
         _stat("Cápitas total", _fmt_entero(capitas.get("total")))
         _stat("Servicios total", _fmt_entero(servicios.get("total")))
-        _stat("Cápitas básico", _fmt_entero(capitas.get("basico")))
-        _stat("Cápitas completo", _fmt_entero(capitas.get("completo")))
-        _stat("Cápitas VIP", _fmt_entero(capitas.get("vip")))
-        _stat("Cápitas rama 87", _fmt_entero(capitas.get("rama_87")))
-        _stat("Cápitas rama 89", _fmt_entero(capitas.get("rama_89")))
-        _stat("Cápitas rama 90", _fmt_entero(capitas.get("rama_90")))
-        _stat("Coef. uso", str(cuadro.get("coef_uso", "—")))
-        _stat("Coef. índice", str(cuadro.get("coef_indice", "—")))
-        _stat("Valor básico", str(valores.get("basico", "—")))
-        _stat("Valor completo", str(valores.get("completo", "—")))
-        _stat("Valor VIP", str(valores.get("vip", "—")))
+
+    with ui.grid(columns="repeat(2, minmax(0, 1fr))").classes(
+        "w-full gap-x-4 items-start"
+    ):
+        with ui.column().classes("w-full gap-1"):
+            _seccion("Automotores")
+            _stat(
+                "Básico",
+                _fmt_entero(capitas.get("basico")),
+                color=CATEGORIA_COLORS["basico"],
+            )
+            _stat(
+                "Completo",
+                _fmt_entero(capitas.get("completo")),
+                color=CATEGORIA_COLORS["completo"],
+            )
+            _stat(
+                "VIP",
+                _fmt_entero(capitas.get("vip")),
+                color=CATEGORIA_COLORS["vip"],
+            )
+
+        with ui.column().classes("w-full gap-1"):
+            _seccion("Ramas Varias")
+            _stat(
+                "Rama 87",
+                _fmt_entero(capitas.get("rama_87")),
+                color=CATEGORIA_COLORS["rama_87"],
+            )
+            _stat(
+                "Rama 89",
+                _fmt_entero(capitas.get("rama_89")),
+                color=CATEGORIA_COLORS["rama_89"],
+            )
+            _stat(
+                "Rama 90",
+                _fmt_entero(capitas.get("rama_90")),
+                color=CATEGORIA_COLORS["rama_90"],
+            )
+
+    with ui.grid(columns="repeat(2, minmax(0, 1fr))").classes(
+        "w-full gap-x-4 items-start"
+    ):
+        with ui.column().classes("w-full gap-1"):
+            _seccion("Coeficientes")
+            _stat("Coef. uso", _fmt_porcentaje(cuadro.get("coef_uso")))
+            _stat("Coef. índice", _fmt_porcentaje(cuadro.get("coef_indice")))
+
+        with ui.column().classes("w-full gap-1"):
+            _seccion("Valores")
+            _stat(
+                "Básico",
+                format_ars(valores.get("basico")),
+                color=CATEGORIA_COLORS["basico"],
+            )
+            _stat(
+                "Completo",
+                format_ars(valores.get("completo")),
+                color=CATEGORIA_COLORS["completo"],
+            )
+            _stat(
+                "VIP",
+                format_ars(valores.get("vip")),
+                color=CATEGORIA_COLORS["vip"],
+            )
 
 
 def _render_card(container: ui.element, p: dict) -> None:
