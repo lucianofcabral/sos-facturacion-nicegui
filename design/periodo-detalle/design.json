@@ -1,0 +1,27 @@
+{
+  "title": "Detalle de período",
+  "brief": "Rediseño de la subpágina /periodo/{id}: ver y editar cápitas por categoría, ejecutar el cierre (generar/regenerar/descargar Excel), importar servicios y explorar la tabla de servicios del período.",
+  "artboards": [
+    {
+      "file": "01-panel-trabajo.html",
+      "title": "Panel de trabajo",
+      "tradeoff": "Resumen del cierre y acciones siempre visibles mientras se editan cápitas; la tabla de servicios queda más angosta y hay que scrollear la columna principal.",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "02-flujo-etapas.html",
+      "title": "Flujo por etapas",
+      "tradeoff": "Guía secuencial clara para quien no hace esto todos los días; más scroll vertical y menos densidad para el usuario experto.",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "03-hoja-calculo.html",
+      "title": "Hoja de cálculo",
+      "tradeoff": "Máxima densidad y la aritmética visible en una sola grilla, familiar para quien viene del Excel legado; puede intimidar a un usuario nuevo y exige alineación muy cuidada.",
+      "width": 1440,
+      "height": 900
+    }
+  ]
+}
