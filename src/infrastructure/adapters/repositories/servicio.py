@@ -183,6 +183,38 @@ class ServicioRepositoryPg(PostgresRepository, ServicioRepository):
             for r in rows
         ]
 
+    async def conteo_por_tipo_de_periodo(
+        self, periodo_id: int
+    ) -> list[ConteoTipoServicio]:
+        """Servicios de un período agrupados por tipo, ordenados por total DESC.
+
+        Devuelve solo los tipos con al menos un servicio en el período: un tipo
+        sin servicios no aparece (el llamador decide si lo muestra en cero).
+        """
+        sql = (
+            "SELECT ts.id AS tipo_servicio_id, ts.codigo, ts.nombre, "
+            "ts.categoria, ts.es_alias, COUNT(*)::int AS total "
+            "FROM servicio s "
+            "JOIN tipo_servicio ts ON ts.id = s.tipo_servicio_id "
+            "WHERE s.periodo_id = %s "
+            "GROUP BY ts.id, ts.codigo, ts.nombre, ts.categoria, ts.es_alias "
+            "ORDER BY total DESC, ts.codigo"
+        )
+        async with self._conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(sql, (periodo_id,))
+            rows = await cur.fetchall()
+        return [
+            ConteoTipoServicio(
+                tipo_servicio_id=r["tipo_servicio_id"],
+                codigo=r["codigo"],
+                nombre=r["nombre"],
+                categoria=CategoriaServicio(r["categoria"]),
+                es_alias=r["es_alias"],
+                total=r["total"],
+            )
+            for r in rows
+        ]
+
     async def top_productores(self, limite: int = 10) -> list[ConteoProductor]:
         sql = (
             "SELECT cod_productor, COUNT(*)::int AS total "

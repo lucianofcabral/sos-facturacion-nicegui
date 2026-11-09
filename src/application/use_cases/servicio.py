@@ -12,7 +12,11 @@ from src.application.services.excel_servicios import ImportadorServiciosExcel
 from src.domain.dto import CreateServicio, EditServicio
 from src.domain.enums import RolUsuario
 from src.domain.exceptions import ImportServiciosError
-from src.domain.models.entities import PaginaServicios, Servicio
+from src.domain.models.entities import (
+    ConteoTipoServicio,
+    PaginaServicios,
+    Servicio,
+)
 from src.domain.ports.uow import UnitOfWorkPort
 
 
@@ -50,6 +54,13 @@ async def buscar_servicios(
 ) -> PaginaServicios:
     """Read-only: one filtered page of a period's services plus the total."""
     return await uow.servicios.search(periodo_id, texto, desde, hasta, page, page_size)
+
+
+async def conteo_por_tipo_de_periodo(
+    uow: UnitOfWorkPort, periodo_id: int
+) -> list[ConteoTipoServicio]:
+    """Read-only: servicios del período agrupados por tipo (total DESC)."""
+    return await uow.servicios.conteo_por_tipo_de_periodo(periodo_id)
 
 
 async def editar_servicio(
