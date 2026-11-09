@@ -37,7 +37,7 @@ from src.ui.componentes import shell
 from src.ui.dialogos import open_form_dialog
 from src.ui.dialogos.pendientes import resolver_pendientes
 from src.ui.dialogos.periodo import PERIODO_FIELDS, open_cierre_dialog
-from src.ui.formatos import format_ars, format_int
+from src.ui.formatos import format_ars, format_int, format_pct
 from src.ui.session import (
     get_current_rol,
     get_current_user,
@@ -229,15 +229,6 @@ async def _descargar_excel(periodo: dict) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _fmt_pct(value) -> str:
-    """Coeficiente 0..1 (str o Decimal) como porcentaje es-AR; ``—`` si no es
-    numérico."""
-    try:
-        return f"{float(value) * 100:.2f}".replace(".", ",") + " %"
-    except (TypeError, ValueError):
-        return "—"
-
-
 # --------------------------------------------------------------------------- #
 # Bloques de UI
 # --------------------------------------------------------------------------- #
@@ -314,7 +305,7 @@ def _render_capitas_card(periodo_id: int, filas: list[dict]) -> None:
             _td(format_int(c["servicios"]), align_right=True)
             participacion = (c["capitas"] or 0) / total * 100 if total else 0
             _td(
-                _fmt_pct(participacion / 100),
+                format_pct(participacion / 100),
                 align_right=True,
                 extra="text-grey-6",
             )
@@ -343,7 +334,7 @@ def _render_capitas_card(periodo_id: int, filas: list[dict]) -> None:
                     _td(format_int(sub_cap), align_right=True)
                     _td(format_int(sub_serv), align_right=True)
                     _td(
-                        _fmt_pct(sub_cap / total if total else 0),
+                        format_pct(sub_cap / total if total else 0),
                         align_right=True,
                         extra="text-grey-6",
                     )
@@ -378,7 +369,7 @@ def _render_capitas_card(periodo_id: int, filas: list[dict]) -> None:
 
 
 def _render_resumen(periodo: dict) -> None:
-    """Total, coeficientes y valores del cierre oficial vigente."""
+    """Total, ajuste, coeficientes y valores del cierre oficial vigente."""
     cuadro = periodo["cuadro"] or {}
     capitas = cuadro.get("capitas") or {}
     valores = cuadro.get("valores") or {}
@@ -399,13 +390,26 @@ def _render_resumen(periodo: dict) -> None:
             ui.label("Sin cierre oficial generado").classes(_CAPTION)
 
         ui.separator().classes("my-3")
-        ui.label("COEFICIENTES").classes(
-            "text-caption text-grey-6 text-weight-bold"
-        ).style("letter-spacing: .07em")
-        for etiqueta, clave in (("Uso", "coef_uso"), ("Índice", "coef_indice")):
+        ui.label("AJUSTE").classes("text-caption text-grey-6 text-weight-bold").style(
+            "letter-spacing: .07em"
+        )
+        with ui.row().classes("w-full items-center justify-between"):
+            ui.label("Aumento").classes("text-body2 text-grey-5")
+            ui.label(format_pct(cuadro.get("aumento"), fraction=False)).classes(
+                "text-body2 sos-num"
+            )
+        ui.label(
+            "Aplicado en el cierre oficial"
+            if periodo["cerrado"]
+            else "Sin cierre oficial"
+        ).classes("text-caption text-grey-7")
+        for etiqueta, clave in (
+            ("Coef. uso", "coef_uso"),
+            ("Coef. índice", "coef_indice"),
+        ):
             with ui.row().classes("w-full items-center justify-between"):
                 ui.label(etiqueta).classes("text-body2 text-grey-5")
-                ui.label(_fmt_pct(cuadro.get(clave))).classes("text-body2 sos-num")
+                ui.label(format_pct(cuadro.get(clave))).classes("text-body2 sos-num")
 
         ui.separator().classes("my-3")
         ui.label("VALORES POR CATEGORÍA").classes(
