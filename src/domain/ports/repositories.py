@@ -135,6 +135,10 @@ class ServicioRepository(Repository[Servicio], Protocol):
         """Servicios agrupados por tipo (codigo, nombre, categoria, es_alias)."""
         ...
 
+    def conteo_por_tipo_de_periodo(self, periodo_id: int) -> list[ConteoTipoServicio]:
+        """Servicios de UN periodo agrupados por tipo, por total DESC."""
+        ...
+
     def top_productores(self, limite: int = 10) -> list[ConteoProductor]:
         """Productores ordenados por cantidad de servicios (DESC), top ``limite``."""
         ...
