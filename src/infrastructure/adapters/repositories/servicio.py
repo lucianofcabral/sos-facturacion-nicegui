@@ -8,6 +8,7 @@ from src.domain.enums import CategoriaServicio
 from src.domain.models.entities import (
     ConteoCategoriaPeriodo,
     ConteoProductor,
+    ConteoTipoServicio,
     PaginaServicios,
     Servicio,
 )
@@ -153,6 +154,30 @@ class ServicioRepositoryPg(PostgresRepository, ServicioRepository):
                 anio=r["anio"],
                 mes=r["mes"],
                 categoria=CategoriaServicio(r["categoria"]),
+                total=r["total"],
+            )
+            for r in rows
+        ]
+
+    async def conteo_por_tipo(self) -> list[ConteoTipoServicio]:
+        sql = (
+            "SELECT ts.id AS tipo_servicio_id, ts.codigo, ts.nombre, "
+            "ts.categoria, ts.es_alias, COUNT(*)::int AS total "
+            "FROM servicio s "
+            "JOIN tipo_servicio ts ON ts.id = s.tipo_servicio_id "
+            "GROUP BY ts.id, ts.codigo, ts.nombre, ts.categoria, ts.es_alias "
+            "ORDER BY total DESC, ts.codigo"
+        )
+        async with self._conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(sql)
+            rows = await cur.fetchall()
+        return [
+            ConteoTipoServicio(
+                tipo_servicio_id=r["tipo_servicio_id"],
+                codigo=r["codigo"],
+                nombre=r["nombre"],
+                categoria=CategoriaServicio(r["categoria"]),
+                es_alias=r["es_alias"],
                 total=r["total"],
             )
             for r in rows

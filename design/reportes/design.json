@@ -1,0 +1,27 @@
+{
+  "title": "Rediseño pestaña Reportes",
+  "brief": "Rediseñar la pestaña Reportes (NiceGUI dark) con: servicios por tipo de servicio, periodo con más servicios, gráfico de valor de alícuota (línea) + aumento % (barras), cápitas y coeficientes por tipo/periodo.",
+  "artboards": [
+    {
+      "file": "01-dashboard-operativo.html",
+      "title": "Dashboard operativo",
+      "tradeoff": "Todo de una vez (KPIs + grid de gráficos); rápida lectura global pero menos profundidad por bloque",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "02-foco-por-tipo.html",
+      "title": "Foco por tipo de servicio",
+      "tradeoff": "Selector de tipo con detalle profundo de ese tipo; mejor análisis por tipo pero hay que cambiar de tipo para comparar",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "03-tabs-tematicos.html",
+      "title": "Tabs temáticos",
+      "tradeoff": "Tabs Servicios / Valores / Cápitas / Coeficientes; profundidad por tema sin saturar, a costa de más clics",
+      "width": 1440,
+      "height": 900
+    }
+  ]
+}

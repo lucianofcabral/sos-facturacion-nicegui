@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reportes — Tabs temáticos</title>
+<style>
+  :root {
+    --bg: #121212; --card: #1E1E1E; --border: rgba(255,255,255,0.12);
+    --text: #E5E7EB; --muted: #9CA3AF; --faint: #6B7280;
+    --red: #DC2626; --red-700: #B91C1C; --red-900: #7F1D1D;
+    --red-500: #EF4444; --red-400: #F87171; --red-300: #FCA5A5; --amber: #F59E0B;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.45;
+  }
+  .shell { max-width: 1440px; margin: 0 auto; padding: 24px 28px 48px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0; font-weight: 650; }
+  .subtitle { color: var(--muted); font-size: 13px; }
+  [role="tablist"] { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  [role="tab"] {
+    background: none; border: none; color: var(--muted); font-size: 14px;
+    padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  [role="tab"]:hover { color: var(--text); }
+  [role="tab"][aria-selected="true"] { color: var(--text); border-bottom-color: var(--red); font-weight: 600; }
+  [role="tab"]:focus { outline: 2px solid var(--red); outline-offset: -2px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .panel.full { grid-column: 1 / -1; }
+  .panel h2 { font-size: 14px; margin: 0 0 4px; font-weight: 600; }
+  .panel .hint { font-size: 12px; color: var(--faint); margin: 0 0 12px; }
+  svg { display: block; width: 100%; height: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .axis-label { fill: var(--faint); font-size: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .note { font-size: 12px; color: var(--faint); margin-top: 8px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <h1>Reportes</h1>
+      <span class="subtitle">Exploración temática de la información</span>
+    </div>
+  </header>
+
+  <div role="tablist" aria-label="Secciones de reportes">
+    <button role="tab" aria-selected="true" id="tab-serv">Servicios</button>
+    <button role="tab" aria-selected="false" id="tab-val">Valores y aumentos</button>
+    <button role="tab" aria-selected="false" id="tab-cap">Cápitas</button>
+    <button role="tab" aria-selected="false" id="tab-coef">Coeficientes</button>
+  </div>
+
+  <!-- Panel 1: Servicios -->
+  <div role="tabpanel" aria-labelledby="tab-serv">
+    <section class="grid">
+      <div class="panel">
+        <h2>Servicios por tipo de servicio</h2>
+        <p class="hint">Cantidad total por tipo (acumulado)</p>
+        <svg viewBox="0 0 560 220" role="img" aria-label="Servicios por tipo">
+          <g class="axis-label" text-anchor="end">
+            <text x="46" y="46">5.000</text><text x="46" y="96">4.000</text><text x="46" y="146">2.000</text><text x="46" y="198">0</text>
+          </g>
+          <line x1="52" y1="40" x2="552" y2="40" stroke="#262626"/>
+          <line x1="52" y1="90" x2="552" y2="90" stroke="#262626"/>
+          <line x1="52" y1="140" x2="552" y2="140" stroke="#262626"/>
+          <line x1="52" y1="190" x2="552" y2="190" stroke="#374151"/>
+          <rect x="52" y="30" width="60" height="160" fill="#DC2626" rx="3"/>
+          <text x="82" y="20" text-anchor="middle" fill="#E5E7EB" font-size="11">5.120</text>
+          <text x="82" y="210" text-anchor="middle" fill="#9CA3AF" font-size="11">Básico 659</text>
+          <rect x="144" y="104" width="60" height="86" fill="#B91C1C" rx="3"/>
+          <text x="174" y="94" text-anchor="middle" fill="#E5E7EB" font-size="11">3.100</text>
+          <text x="174" y="210" text-anchor="middle" fill="#9CA3AF" font-size="11">Completo 660</text>
+          <rect x="236" y="168" width="60" height="22" fill="#7F1D1D" rx="3"/>
+          <text x="266" y="158" text-anchor="middle" fill="#E5E7EB" font-size="11">910</text>
+          <text x="266" y="210" text-anchor="middle" fill="#9CA3AF" font-size="11">VIP 658</text>
+          <rect x="328" y="186" width="60" height="4" fill="#EF4444" rx="2"/>
+          <text x="358" y="178" text-anchor="middle" fill="#E5E7EB" font-size="11">148</text>
+          <text x="358" y="210" text-anchor="middle" fill="#9CA3AF" font-size="11">Ramas</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <h2>Servicios por periodo</h2>
+        <p class="hint">Evolución mensual (últimos 12 meses)</p>
+        <svg viewBox="0 0 560 220" role="img" aria-label="Servicios por periodo">
+          <polyline fill="none" stroke="#DC2626" stroke-width="2.5"
+            points="20,150 68,140 116,132 164,120 212,128 260,118 308,110 356,100 404,90 452,78 500,70 548,60"/>
+          <g class="axis-label" text-anchor="middle">
+            <text x="20" y="212">Ene</text><text x="116" y="212">Mar</text><text x="212" y="212">May</text>
+            <text x="308" y="212">Jul</text><text x="404" y="212">Sep</text><text x="500" y="212">Nov</text>
+          </g>
+        </svg>
+        <p class="note">Periodo con más servicios: <strong>Oct 2025</strong> (398).</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- Panel 2: Valores y aumentos (oculto por defecto en la demo visual) -->
+  <div role="tabpanel" aria-labelledby="tab-val" hidden>
+    <section class="grid">
+      <div class="panel full">
+        <h2>Valor de alícuota + aumento aplicado</h2>
+        <p class="hint">Valor del tipo Básico (línea) y aumento % por periodo (barras)</p>
+        <svg viewBox="0 0 1100 260" role="img" aria-label="Valor y aumento">
+          <g class="axis-label" text-anchor="end">
+            <text x="46" y="40">$ 5.200</text><text x="46" y="90">$ 4.900</text>
+            <text x="46" y="140">$ 4.600</text><text x="46" y="190">$ 4.300</text><text x="46" y="240">$ 4.000</text>
+          </g>
+          <line x1="52" y1="35" x2="52" y2="240" stroke="#374151"/>
+          <g fill="#DC2626" opacity="0.28">
+            <rect x="352" y="184" width="26" height="26" rx="2"/><rect x="562" y="184" width="26" height="26" rx="2"/>
+            <rect x="702" y="158" width="26" height="52" rx="2"/>
+          </g>
+          <polyline fill="none" stroke="#F59E0B" stroke-width="2.5"
+            points="85,185 155,185 225,185 295,185 365,168 435,168 505,168 575,151 645,151 715,131 785,131 855,131"/>
+          <g class="axis-label" text-anchor="middle" fill="#E5E7EB">
+            <text x="85" y="258">Ene</text><text x="225" y="258">Mar</text><text x="365" y="258">May</text>
+            <text x="505" y="258">Jul</text><text x="645" y="258">Sep</text><text x="785" y="258">Nov</text>
+          </g>
+        </svg>
+        <div class="legend">
+          <span><i class="dot" style="background:#F59E0B"></i>Valor alícuota (ARS)</span>
+          <span><i class="dot" style="background:#DC2626"></i>Aumento % por periodo</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Panel 3: Cápitas -->
+  <div role="tabpanel" aria-labelledby="tab-cap" hidden>
+    <section class="grid">
+      <div class="panel full">
+        <h2>Cápitas por tipo de servicio</h2>
+        <p class="hint">Evolución mensual apilada por categoría</p>
+        <svg viewBox="0 0 1100 240" role="img" aria-label="Cápitas apiladas">
+          <g class="axis-label" text-anchor="end">
+            <text x="46" y="46">1.000</text><text x="46" y="96">500</text><text x="46" y="146">250</text><text x="46" y="196">0</text>
+          </g>
+          <line x1="52" y1="40" x2="1092" y2="40" stroke="#262626"/>
+          <line x1="52" y1="90" x2="1092" y2="90" stroke="#262626"/>
+          <line x1="52" y1="140" x2="1092" y2="140" stroke="#262626"/>
+          <line x1="52" y1="190" x2="1092" y2="190" stroke="#374151"/>
+          <g>
+            <rect x="70" y="150" width="70" height="40" fill="#DC2626"/><rect x="70" y="120" width="70" height="30" fill="#B91C1C"/><rect x="70" y="100" width="70" height="20" fill="#7F1D1D"/><rect x="70" y="80" width="70" height="20" fill="#FCA5A5"/>
+            <rect x="160" y="146" width="70" height="44" fill="#DC2626"/><rect x="160" y="118" width="70" height="28" fill="#B91C1C"/><rect x="160" y="99" width="70" height="19" fill="#7F1D1D"/><rect x="160" y="78" width="70" height="21" fill="#FCA5A5"/>
+            <rect x="250" y="142" width="70" height="48" fill="#DC2626"/><rect x="250" y="115" width="70" height="27" fill="#B91C1C"/><rect x="250" y="97" width="70" height="18" fill="#7F1D1D"/><rect x="250" y="76" width="70" height="21" fill="#FCA5A5"/>
+            <rect x="340" y="140" width="70" height="50" fill="#DC2626"/><rect x="340" y="113" width="70" height="27" fill="#B91C1C"/><rect x="340" y="96" width="70" height="17" fill="#7F1D1D"/><rect x="340" y="75" width="70" height="21" fill="#FCA5A5"/>
+            <rect x="430" y="138" width="70" height="52" fill="#DC2626"/><rect x="430" y="111" width="70" height="27" fill="#B91C1C"/><rect x="430" y="94" width="70" height="17" fill="#7F1D1D"/><rect x="430" y="73" width="70" height="21" fill="#FCA5A5"/>
+            <rect x="520" y="136" width="70" height="54" fill="#DC2626"/><rect x="520" y="109" width="70" height="27" fill="#B91C1C"/><rect x="520" y="93" width="70" height="16" fill="#7F1D1D"/><rect x="520" y="72" width="70" height="21" fill="#FCA5A5"/>
+            <rect x="610" y="134" width="70" height="56" fill="#DC2626"/><rect x="610" y="107" width="70" height="27" fill="#B91C1C"/><rect x="610" y="91" width="70" height="16" fill="#7F1D1D"/><rect x="610" y="70" width="70" height="21" fill="#FCA5A5"/>
+            <rect x="700" y="132" width="70" height="58" fill="#DC2626"/><rect x="700" y="105" width="70" height="27" fill="#B91C1C"/><rect x="700" y="90" width="70" height="15" fill="#7F1D1D"/><rect x="700" y="69" width="70" height="21" fill="#FCA5A5"/>
+            <rect x="790" y="130" width="70" height="60" fill="#DC2626"/><rect x="790" y="103" width="70" height="27" fill="#B91C1C"/><rect x="790" y="88" width="70" height="15" fill="#7F1D1D"/><rect x="790" y="67" width="70" height="21" fill="#FCA5A5"/>
+            <rect x="880" y="128" width="70" height="62" fill="#DC2626"/><rect x="880" y="101" width="70" height="27" fill="#B91C1C"/><rect x="880" y="86" width="70" height="15" fill="#7F1D1D"/><rect x="880" y="65" width="70" height="21" fill="#FCA5A5"/>
+            <rect x="970" y="126" width="70" height="64" fill="#DC2626"/><rect x="970" y="99" width="70" height="27" fill="#B91C1C"/><rect x="970" y="85" width="70" height="14" fill="#7F1D1D"/><rect x="970" y="64" width="70" height="21" fill="#FCA5A5"/>
+          </g>
+          <g class="axis-label" text-anchor="middle" fill="#E5E7EB">
+            <text x="105" y="222">Ene</text><text x="285" y="222">Mar</text><text x="465" y="222">May</text>
+            <text x="645" y="222">Jul</text><text x="825" y="222">Sep</text><text x="1005" y="222">Nov</text>
+          </g>
+        </svg>
+        <div class="legend">
+          <span><i class="dot" style="background:#DC2626"></i>Básico</span>
+          <span><i class="dot" style="background:#B91C1C"></i>Completo</span>
+          <span><i class="dot" style="background:#7F1D1D"></i>VIP</span>
+          <span><i class="dot" style="background:#FCA5A5"></i>Ramas</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Panel 4: Coeficientes -->
+  <div role="tabpanel" aria-labelledby="tab-coef" hidden>
+    <section class="grid">
+      <div class="panel full">
+        <h2>Coeficiente de uso por periodo</h2>
+        <p class="hint">coef_uso (servicios / cápitas) y coef_indice de referencia</p>
+        <svg viewBox="0 0 1100 240" role="img" aria-label="Coeficientes">
+          <polyline fill="none" stroke="#DC2626" stroke-width="2.5"
+            points="20,60 68,70 116,64 164,58 212,66 260,72 308,60 356,54 404,62 452,68 500,58 548,50 596,60 644,64 692,58 740,52 788,60 836,66 884,56 932,50 980,58 1028,62"/>
+          <polyline fill="none" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="5 4"
+            points="20,90 1028,90"/>
+          <g class="axis-label" text-anchor="middle" fill="#E5E7EB">
+            <text x="20" y="222">Ene 24</text><text x="308" y="222">Jul 24</text><text x="596" y="222">Ene 25</text>
+            <text x="884" y="222">Jul 25</text>
+          </g>
+        </svg>
+        <div class="legend">
+          <span><i class="dot" style="background:#DC2626"></i>coef_uso</span>
+          <span><i class="dot" style="background:#9CA3AF"></i>coef_indice</span>
+        </div>
+      </div>
+      <div class="panel full">
+        <h2>Coeficientes por tipo (último periodo)</h2>
+        <p class="hint">coef_uso por categoría automotor</p>
+        <table>
+          <thead>
+            <tr><th>Tipo</th><th class="num">Servicios</th><th class="num">Cápitas</th><th class="num">coef_uso</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Básico</td><td class="num">398</td><td class="num">555</td><td class="num">0.7171</td></tr>
+            <tr><td>Completo</td><td class="num">240</td><td class="num">310</td><td class="num">0.7742</td></tr>
+            <tr><td>VIP</td><td class="num">82</td><td class="num">140</td><td class="num">0.5857</td></tr>
+            <tr><td><strong>Global</strong></td><td class="num">720</td><td class="num">1.005</td><td class="num">0.7164</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+</div>
+</body>
+</html>
