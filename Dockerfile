@@ -23,7 +23,12 @@ COPY main.py ./
 COPY src ./src
 
 # Usuario sin privilegios
-RUN useradd --create-home appuser && chown -R appuser:appuser /app
+# El directorio .nicegui debe existir en la imagen y pertenecer a appuser:
+# al montar el volumen named encima, Docker copia el ownership del directorio
+# de la imagen (si existe) en lugar de crear el mountpoint como root.
+RUN useradd --create-home appuser \
+    && mkdir -p /app/.nicegui \
+    && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8080
